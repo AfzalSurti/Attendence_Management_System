@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import {
   getAllProjectsAPI, createProjectAPI,
-  updateProjectAPI, deleteProjectAPI
+  updateProjectAPI, deleteProjectAPI, getProjectDetailsAPI
 } from '../../services/api';
 
 export default function ManageProjectsScreen({ navigation }) {
@@ -21,7 +21,14 @@ export default function ManageProjectsScreen({ navigation }) {
   const loadProjects = async () => {
     try {
       const res = await getAllProjectsAPI();
-      setProjects(res.data);
+      const details = await Promise.all(
+        res.data.map((p) => getProjectDetailsAPI(p.id).catch(() => null))
+      );
+      const enriched = res.data.map((p, i) => ({
+        ...p,
+        employee_count: details[i]?.data?.employee_count ?? 0,
+      }));
+      setProjects(enriched);
     } catch (err) {
       Alert.alert('Error', 'Failed to load projects');
     } finally {
@@ -103,6 +110,9 @@ export default function ManageProjectsScreen({ navigation }) {
       >
         <Text style={styles.projectCode}>{item.project_number}</Text>
         <Text style={styles.projectName}>{item.project_name}</Text>
+        <Text style={styles.empCount}>
+          {item.employee_count ?? 0} employee{(item.employee_count ?? 0) !== 1 ? 's' : ''} assigned
+        </Text>
         <Text style={styles.viewHint}>Tap to view details →</Text>
       </TouchableOpacity>
       <View style={styles.cardActions}>
@@ -215,6 +225,7 @@ const styles = StyleSheet.create({
     color: '#1a237e', marginBottom: 2
   },
   projectName: { fontSize: 15, color: '#333' },
+  empCount: { fontSize: 12, color: '#5c6bc0', marginTop: 4, fontWeight: '600' },
   viewHint: { fontSize: 11, color: '#5c6bc0', marginTop: 6 },
   cardActions: { flexDirection: 'row', gap: 8 },
   editBtn: {

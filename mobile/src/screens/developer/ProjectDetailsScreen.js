@@ -7,6 +7,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 
 export default function ProjectDetailsScreen({ navigation, route }) {
   const project = route.params?.project;
+  const readOnly = route.params?.readOnly ?? false;
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +30,13 @@ export default function ProjectDetailsScreen({ navigation, route }) {
 
   const renderEmployee = ({ item }) => (
     <View style={styles.employeeCard}>
-      <Text style={styles.empName}>{item.name}</Text>
-      <Text style={styles.empMobile}>{item.mobile_number}</Text>
+      <View style={styles.empAvatar}>
+        <Text style={styles.empAvatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+      </View>
+      <View>
+        <Text style={styles.empName}>{item.name}</Text>
+        <Text style={styles.empMobile}>{item.mobile_number}</Text>
+      </View>
     </View>
   );
 
@@ -61,6 +67,7 @@ export default function ProjectDetailsScreen({ navigation, route }) {
         </TouchableOpacity>
         <Text style={styles.title}>{details?.project_name || project.project_name}</Text>
         <Text style={styles.subtitle}>{details?.project_number || project.project_number}</Text>
+        {readOnly && <Text style={styles.readOnlyBadge}>View only</Text>}
       </View>
 
       <View style={styles.infoCard}>
@@ -95,6 +102,11 @@ const styles = StyleSheet.create({
   back: { color: '#1a237e', fontSize: 16, marginBottom: 8 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a237e' },
   subtitle: { fontSize: 14, color: '#666', marginTop: 4 },
+  readOnlyBadge: {
+    fontSize: 11, color: '#5c6bc0', fontWeight: 'bold',
+    marginTop: 6, backgroundColor: '#e8eaf6',
+    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+  },
   infoCard: {
     backgroundColor: '#fff', borderRadius: 16,
     padding: 20, marginBottom: 16, elevation: 3,
@@ -113,7 +125,13 @@ const styles = StyleSheet.create({
   employeeCard: {
     backgroundColor: '#fff', borderRadius: 12,
     padding: 14, marginBottom: 8, elevation: 2,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
+  empAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#1a237e', justifyContent: 'center', alignItems: 'center',
+  },
+  empAvatarText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   empName: { fontSize: 15, fontWeight: 'bold', color: '#333' },
   empMobile: { fontSize: 13, color: '#888', marginTop: 2 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 20, fontSize: 14 },

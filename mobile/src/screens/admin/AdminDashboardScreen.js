@@ -85,6 +85,18 @@ export default function AdminDashboardScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.menuItem}
+        onPress={() => navigation.navigate('AdminProjects')}
+      >
+        <Text style={styles.menuIcon}>📁</Text>
+        <View>
+          <Text style={styles.menuTitle}>View Projects</Text>
+          <Text style={styles.menuSub}>See projects and assigned employees</Text>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
         onPress={() => navigation.navigate('Holidays')}
       >
         <Text style={styles.menuIcon}>🗓️</Text>
