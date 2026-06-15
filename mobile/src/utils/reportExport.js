@@ -25,17 +25,23 @@ const escapeCsv = (value) => {
   return str;
 };
 
-const buildRows = (records) =>
-  records.map((r) => [
-    formatDate(r.date),
-    r.project_code || '--',
-    r.project_name || '--',
-    formatTime(r.checkin_time),
-    formatCoords(r.checkin_latitude, r.checkin_longitude),
-    formatTime(r.checkout_time),
-    formatCoords(r.checkout_latitude, r.checkout_longitude),
-    r.working_hours != null ? `${r.working_hours}` : '--',
-  ]);
+const buildRows = (records, includeEmployee = false) =>
+  records.map((r) => {
+    const base = [
+      formatDate(r.date),
+      r.project_code || '--',
+      r.project_name || '--',
+      formatTime(r.checkin_time),
+      formatCoords(r.checkin_latitude, r.checkin_longitude),
+      formatTime(r.checkout_time),
+      formatCoords(r.checkout_latitude, r.checkout_longitude),
+      r.working_hours != null ? `${r.working_hours}` : '--',
+    ];
+    if (includeEmployee) {
+      return [r.employee_name || '--', r.mobile_number || '--', ...base];
+    }
+    return base;
+  });
 
 export const buildAttendanceCsv = (employeeName, records, rangeLabel) => {
   const headers = [
@@ -44,12 +50,29 @@ export const buildAttendanceCsv = (employeeName, records, rangeLabel) => {
     'Check-out Time', 'Check-out Location', 'Working Hours',
   ];
   const lines = [
-  `Employee,${escapeCsv(employeeName)}`,
-  `Report Period,${escapeCsv(rangeLabel)}`,
-  `Generated,${escapeCsv(new Date().toLocaleString('en-IN'))}`,
-  '',
-  headers.join(','),
-  ...buildRows(records).map((row) => row.map(escapeCsv).join(',')),
+    `Employee,${escapeCsv(employeeName)}`,
+    `Report Period,${escapeCsv(rangeLabel)}`,
+    `Generated,${escapeCsv(new Date().toLocaleString('en-IN'))}`,
+    '',
+    headers.join(','),
+    ...buildRows(records).map((row) => row.map(escapeCsv).join(',')),
+  ];
+  return lines.join('\n');
+};
+
+export const buildBulkAttendanceCsv = (title, records, filterLabel) => {
+  const headers = [
+    'Employee', 'Mobile', 'Date', 'Project Code', 'Project Name',
+    'Check-in Time', 'Check-in Location',
+    'Check-out Time', 'Check-out Location', 'Working Hours',
+  ];
+  const lines = [
+    `Report,${escapeCsv(title)}`,
+    `Filters,${escapeCsv(filterLabel)}`,
+    `Generated,${escapeCsv(new Date().toLocaleString('en-IN'))}`,
+    '',
+    headers.join(','),
+    ...buildRows(records, true).map((row) => row.map(escapeCsv).join(',')),
   ];
   return lines.join('\n');
 };
@@ -107,6 +130,63 @@ const buildAttendanceHtml = (employeeName, records, rangeLabel) => {
   `;
 };
 
+const buildBulkAttendanceHtml = (title, records, filterLabel) => {
+  const rows = records.map((r) => `
+    <tr>
+      <td>${r.employee_name || '--'}</td>
+      <td>${r.mobile_number || '--'}</td>
+      <td>${formatDate(r.date)}</td>
+      <td>${r.project_code || '--'}</td>
+      <td>${r.project_name || '--'}</td>
+      <td>${formatTime(r.checkin_time)}</td>
+      <td>${formatCoords(r.checkin_latitude, r.checkin_longitude)}</td>
+      <td>${formatTime(r.checkout_time)}</td>
+      <td>${formatCoords(r.checkout_latitude, r.checkout_longitude)}</td>
+      <td>${r.working_hours != null ? r.working_hours : '--'}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #222; }
+          h1 { color: #1a237e; font-size: 20px; margin-bottom: 4px; }
+          .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; font-size: 10px; }
+          th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+          th { background: #1a237e; color: #fff; }
+          tr:nth-child(even) { background: #f5f5f5; }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="meta">Filters: ${filterLabel} | Generated: ${new Date().toLocaleString('en-IN')}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Mobile</th>
+              <th>Date</th>
+              <th>Project Code</th>
+              <th>Project</th>
+              <th>Check-in</th>
+              <th>Check-in Location</th>
+              <th>Check-out</th>
+              <th>Check-out Location</th>
+              <th>Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="10">No records found</td></tr>'}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+};
+
 const shareFile = async (uri, mimeType) => {
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
@@ -127,6 +207,21 @@ export const exportAttendanceExcel = async (employeeName, records, rangeLabel) =
 
 export const exportAttendancePdf = async (employeeName, records, rangeLabel) => {
   const html = buildAttendanceHtml(employeeName, records, rangeLabel);
+  const { uri } = await Print.printToFileAsync({ html });
+  await shareFile(uri, 'application/pdf');
+};
+
+export const exportBulkAttendanceExcel = async (title, records, filterLabel) => {
+  const csv = buildBulkAttendanceCsv(title, records, filterLabel);
+  const path = `${FileSystem.cacheDirectory}attendance_bulk_${Date.now()}.csv`;
+  await FileSystem.writeAsStringAsync(path, csv, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+  await shareFile(path, 'text/csv');
+};
+
+export const exportBulkAttendancePdf = async (title, records, filterLabel) => {
+  const html = buildBulkAttendanceHtml(title, records, filterLabel);
   const { uri } = await Print.printToFileAsync({ html });
   await shareFile(uri, 'application/pdf');
 };
