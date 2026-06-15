@@ -59,8 +59,7 @@ Attendence_Management_System/
 │   │   ├── routes/              # API endpoints
 │   │   ├── schemas/             # Pydantic request/response schemas
 │   │   └── utils/               # Auth helpers (JWT, bcrypt)
-│   ├── seed.py                  # Database seed script
-│   ├── .env                     # Environment variables (not committed)
+│   ├── .env.example             # Environment variable template
 │   └── venv/                    # Python virtual environment
 │
 └── mobile/
@@ -104,7 +103,7 @@ python -m venv venv
 ### 2. Install dependencies
 
 ```powershell
-pip install fastapi uvicorn sqlalchemy psycopg2-binary python-dotenv bcrypt python-jose pydantic
+pip install -r requirements.txt
 ```
 
 ### 3. Configure environment
@@ -131,14 +130,73 @@ cd backend
 - Interactive docs: `http://localhost:8000/docs`
 - Use `--host 0.0.0.0` so your phone can reach the API over Wi-Fi
 
-### 5. Seed test data
+---
+
+## Deploy Backend to Render
+
+The repo includes `render.yaml` and `backend/requirements.txt` for one-click Render deployment.
+
+### 1. Push code to GitHub
 
 ```powershell
-cd backend
-.\venv\Scripts\python.exe seed.py
+git add .
+git commit -m "Add Render deployment config and requirements.txt"
+git push origin main
 ```
 
-This creates users, projects, assignments, sample attendance, and holidays.
+### 2. Create Render service
+
+**Option A — Blueprint (recommended)**
+
+1. Go to [render.com](https://render.com) → **New** → **Blueprint**
+2. Connect repo: `AfzalSurti/Attendence_Management_System`
+3. Render reads `render.yaml` and creates the web service
+4. When prompted, paste your **Neon `DATABASE_URL`** for `DATABASE_URL`
+5. Click **Apply**
+
+**Option B — Manual Web Service**
+
+1. **New** → **Web Service** → connect GitHub repo
+2. Settings:
+   - **Root Directory:** `backend`
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+3. **Environment variables:**
+
+| Key | Value |
+|-----|-------|
+| `DATABASE_URL` | Your Neon PostgreSQL URL (`?sslmode=require`) |
+| `SECRET_KEY` | Long random string (generate new — do not reuse leaked keys) |
+| `ALGORITHM` | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `10080` |
+
+4. **Create Web Service**
+
+### 3. Verify deployment
+
+Your API URL will be like:
+
+```
+https://attendance-management-api.onrender.com
+```
+
+Test in browser:
+
+- `https://YOUR-SERVICE.onrender.com/` → `{"message":"Attendance Management System API is running"}`
+- `https://YOUR-SERVICE.onrender.com/docs` → Swagger UI
+
+### 4. Update mobile app
+
+In `mobile/src/services/api.js`, set:
+
+```javascript
+export const BASE_URL = 'https://YOUR-SERVICE.onrender.com';
+```
+
+Rebuild/restart Expo. Use **HTTPS** (not `http://`) for production.
+
+> **Note:** Render free tier sleeps after ~15 min idle. First request after sleep may take 30–60 seconds (cold start).
 
 ---
 

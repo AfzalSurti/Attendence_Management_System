@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { getToken, clearStorage } from '../utils/storage';
 
-// Use your laptop IPv4 from `ipconfig` — phone must be on the same Wi-Fi
-export const BASE_URL = 'http://10.191.140.220:8000';
+// Set in mobile/.env — EXPO_PUBLIC_API_URL=https://your-api.onrender.com
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.191.140.220:8000';
 
 const api = axios.create({
   baseURL: BASE_URL,
