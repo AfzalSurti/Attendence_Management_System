@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform
+  StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+  ScrollView, Keyboard
 } from 'react-native';
 import { loginAPI } from '../../services/api';
 import { saveToken, saveUser } from '../../utils/storage';
+
+const getLoginErrorMessage = (err) => {
+  if (err.response?.data?.detail) {
+    return typeof err.response.data.detail === 'string'
+      ? err.response.data.detail
+      : 'Login failed. Try again.';
+  }
+  if (err.code === 'ECONNABORTED') {
+    return 'Server took too long to respond. Check your network.';
+  }
+  if (err.message === 'Network Error' || !err.response) {
+    return 'Cannot reach server. Use same Wi-Fi and start backend with: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000';
+  }
+  return 'Login failed. Try again.';
+};
 
 export default function LoginScreen({ navigation }) {
   const [mobile, setMobile] = useState('');
@@ -28,7 +44,9 @@ export default function LoginScreen({ navigation }) {
     }
 
     setLoading(true);
+    Keyboard.dismiss();
     try {
+      console.log('Login attempt:', mobile);
       const res = await loginAPI({
         mobile_number: mobile,
         password: password,
@@ -50,8 +68,8 @@ export default function LoginScreen({ navigation }) {
       }
 
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Login failed. Try again.';
-      Alert.alert('Login Failed', msg);
+      console.error('Login error:', err.message, err.code, err.response?.status);
+      Alert.alert('Login Failed', getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -62,6 +80,10 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.card}>
         <Text style={styles.title}>Attendance System</Text>
         <Text style={styles.subtitle}>Login to continue</Text>
@@ -96,6 +118,7 @@ export default function LoginScreen({ navigation }) {
           }
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -104,8 +127,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a237e',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 24,
   },
   card: {
     backgroundColor: '#fff',
