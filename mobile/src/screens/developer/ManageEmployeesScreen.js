@@ -128,6 +128,12 @@ export default function ManageEmployeesScreen({ navigation }) {
       </View>
       <View style={styles.cardActions}>
         <TouchableOpacity
+          style={styles.attendanceBtn}
+          onPress={() => navigation.navigate('EmployeeAttendance', { employee: item })}
+        >
+          <Text style={styles.attendanceBtnText}>Attendance</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={styles.assignBtn}
           onPress={() => { setSelectedEmployee(item); setAssignModalVisible(true); }}
         >
@@ -287,20 +293,25 @@ const styles = StyleSheet.create({
   cardInfo: { marginBottom: 10 },
   empName: { fontSize: 15, fontWeight: 'bold', color: '#333' },
   empMobile: { fontSize: 13, color: '#888', marginTop: 2 },
-  cardActions: { flexDirection: 'row', gap: 8 },
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  attendanceBtn: {
+    backgroundColor: '#f3e5f5', padding: 8,
+    borderRadius: 8, flex: 1, minWidth: '45%', alignItems: 'center',
+  },
+  attendanceBtnText: { color: '#6a1b9a', fontWeight: 'bold', fontSize: 12 },
   assignBtn: {
     backgroundColor: '#e8eaf6', padding: 8,
-    borderRadius: 8, flex: 1, alignItems: 'center'
+    borderRadius: 8, flex: 1, minWidth: '45%', alignItems: 'center'
   },
   assignBtnText: { color: '#1a237e', fontWeight: 'bold', fontSize: 12 },
   editBtn: {
     backgroundColor: '#e3f2fd', padding: 8,
-    borderRadius: 8, flex: 1, alignItems: 'center'
+    borderRadius: 8, flex: 1, minWidth: '45%', alignItems: 'center'
   },
   editBtnText: { color: '#1565c0', fontWeight: 'bold', fontSize: 12 },
   deleteBtn: {
     backgroundColor: '#ffebee', padding: 8,
-    borderRadius: 8, flex: 1, alignItems: 'center'
+    borderRadius: 8, flex: 1, minWidth: '45%', alignItems: 'center'
   },
   deleteBtnText: { color: '#c62828', fontWeight: 'bold', fontSize: 12 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 15 },

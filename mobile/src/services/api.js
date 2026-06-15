@@ -62,3 +62,4 @@ export const getOverviewAPI = () => api.get('/admin/overview');
 export const getHolidaysAPI = () => api.get('/admin/holidays');
 export const addHolidayAPI = (data) => api.post('/admin/holidays', data);
 export const deleteHolidayAPI = (id) => api.delete(`/admin/holidays/${id}`);
+export const updateAttendanceAPI = (id, data) => api.put(`/admin/attendance/${id}`, data);

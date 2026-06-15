@@ -79,10 +79,12 @@ def check_out(
     checkout_time = datetime.now(timezone.utc)
 
     checkin_time = attendance.checkin_time
-    if checkin_time.tzinfo is None:
-        checkin_time = checkin_time.replace(tzinfo=timezone.utc)
+    if checkin_time is not None:
+        if checkin_time.tzinfo is None:
+            checkin_time = checkin_time.replace(tzinfo=timezone.utc)
+        else:
+            checkin_time = checkin_time.astimezone(timezone.utc)
 
-    # Calculate working hours
     working_hours = round(
         (checkout_time - checkin_time).total_seconds() / 3600, 2
     )

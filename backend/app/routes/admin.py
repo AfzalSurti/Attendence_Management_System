@@ -7,7 +7,7 @@ from app.models.employee import Employee, RoleEnum
 from app.models.project import Project
 from app.models.holiday import Holiday
 from app.schemas.holiday import HolidayCreate, HolidayResponse
-from app.routes.employee import get_current_user
+from app.routes.employee import get_current_user, require_developer
 from typing import List, Optional
 from datetime import date, timedelta
 
@@ -29,7 +29,7 @@ def get_all_attendance(
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Employee = Depends(require_admin)
+    current_user: Employee = Depends(require_developer)
 ):
     query = db.query(Attendance)
 
@@ -161,3 +161,23 @@ def get_overview(
         "total_projects": total_projects,
         "today_attendance": today_attendance
     }
+
+@router.put("/attendance/{attendance_id}")
+def update_attendance(
+    attendance_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(require_developer)
+):
+    attendance = db.query(Attendance).filter(Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    if "checkin_time" in data:
+        attendance.checkin_time = data["checkin_time"]
+    if "checkout_time" in data:
+        attendance.checkout_time = data["checkout_time"]
+    if "working_hours" in data:
+        attendance.working_hours = data["working_hours"]
+    db.commit()
+    db.refresh(attendance)
+    return {"message": "Attendance updated successfully"}

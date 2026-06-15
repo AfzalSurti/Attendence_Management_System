@@ -6,6 +6,8 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { getMyProjectsAPI, checkInAPI, checkOutAPI, getTodayAttendanceAPI } from '../../services/api';
+import { uploadSelfieToCloudinary } from '../../services/cloudinary';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export default function AttendanceScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -15,6 +17,7 @@ export default function AttendanceScreen({ navigation }) {
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const cameraRef = useRef(null);
@@ -66,13 +69,6 @@ export default function AttendanceScreen({ navigation }) {
   };
 
   const handleSubmit = async () => {
-    const isCheckIn = !todayAttendance?.checkin_time;
-    const isCheckOut = todayAttendance?.checkin_time && !todayAttendance?.checkout_time;
-
-    if (isCheckIn && !selectedProject) {
-      Alert.alert('Error', 'Please select a project');
-      return;
-    }
     if (!selfieUri) {
       Alert.alert('Error', 'Please take a selfie');
       return;
@@ -80,13 +76,39 @@ export default function AttendanceScreen({ navigation }) {
 
     setGettingLocation(true);
     try {
+      const attendRes = await getTodayAttendanceAPI().catch(() => ({ data: null }));
+      const attendance = attendRes.data;
+      setTodayAttendance(attendance);
+
+      const isCheckIn = !attendance?.checkin_time;
+      const isCheckOut = attendance?.checkin_time && !attendance?.checkout_time;
+
+      if (!isCheckIn && !isCheckOut) {
+        Alert.alert('Error', 'Attendance is already completed for today');
+        return;
+      }
+
+      if (isCheckIn && !selectedProject) {
+        Alert.alert('Error', 'Please select a project');
+        return;
+      }
+
       const coords = await getCoordinates();
       if (!coords) return;
 
       setGettingLocation(false);
-      setLoading(true);
+      setUploadingImage(true);
 
-      const selfie_url = selfieUri;
+      let selfie_url;
+      try {
+        selfie_url = await uploadSelfieToCloudinary(selfieUri);
+      } catch (uploadErr) {
+        Alert.alert('Upload Failed', uploadErr.message || 'Could not upload selfie. Please try again.');
+        return;
+      }
+
+      setUploadingImage(false);
+      setLoading(true);
 
       if (isCheckIn) {
         await checkInAPI({
@@ -107,10 +129,11 @@ export default function AttendanceScreen({ navigation }) {
 
       navigation.replace('Dashboard');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Something went wrong';
-      Alert.alert('Error', msg);
+      console.error('Attendance submit error:', err.response?.status, err.response?.data, err.message);
+      Alert.alert('Error', getApiErrorMessage(err));
     } finally {
       setGettingLocation(false);
+      setUploadingImage(false);
       setLoading(false);
     }
   };
@@ -225,10 +248,15 @@ export default function AttendanceScreen({ navigation }) {
           <TouchableOpacity
             style={styles.submitBtn}
             onPress={handleSubmit}
-            disabled={loading || gettingLocation}
+            disabled={loading || gettingLocation || uploadingImage}
           >
             {gettingLocation ? (
               <Text style={styles.submitBtnText}>Getting your location...</Text>
+            ) : uploadingImage ? (
+              <View style={styles.submitLoadingRow}>
+                <ActivityIndicator color="#fff" />
+                <Text style={styles.submitBtnText}>Uploading selfie...</Text>
+              </View>
             ) : loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
@@ -274,6 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, alignItems: 'center', marginBottom: 30
   },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  submitLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   doneCard: {
     backgroundColor: '#e8f5e9', borderRadius: 16,
     padding: 24, alignItems: 'center', marginTop: 20
