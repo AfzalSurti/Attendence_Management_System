@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getToken } from '../utils/storage';
 
-const BASE_URL = 'http:// 10.191.140.220:8000';
+const BASE_URL = 'http://10.191.140.220:8000';
 // ⚠️ Replace 192.168.1.100 with your laptop's actual IP address
 // To find your IP: open cmd → type "ipconfig" → look for IPv4 Address
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getUser } from '../utils/storage';
 
 // Auth
@@ -31,22 +33,33 @@ export default function AppNavigator() {
   }, []);
 
   const checkUser = async () => {
-    const user = await getUser();
-    if (!user) {
+    try {
+      const user = await getUser();
+      if (!user) {
+        setInitialRoute('Login');
+      } else if (user.role === 'admin') {
+        setInitialRoute('AdminDashboard');
+      } else if (user.role === 'developer') {
+        setInitialRoute('DevDashboard');
+      } else {
+        setInitialRoute('Dashboard');
+      }
+    } catch {
       setInitialRoute('Login');
-    } else if (user.role === 'admin') {
-      setInitialRoute('AdminDashboard');
-    } else if (user.role === 'developer') {
-      setInitialRoute('DevDashboard');
-    } else {
-      setInitialRoute('Dashboard');
     }
   };
 
-  if (!initialRoute) return null;
+  if (!initialRoute) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#1a237e" />
+      </View>
+    );
+  }
 
   return (
-    <NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
       <Stack.Navigator
         initialRouteName={initialRoute}
         screenOptions={{ headerShown: false }}
@@ -69,6 +82,16 @@ export default function AppNavigator() {
         <Stack.Screen name="AttendanceReport" component={AttendanceReportScreen} />
         <Stack.Screen name="Holidays" component={HolidayScreen} />
       </Stack.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+});
