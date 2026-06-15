@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { loginAPI } from '../../services/api';
 import { saveToken, saveUser } from '../../utils/storage';
+import GeoLoader from '../../components/GeoLoader';
 
 const getLoginErrorMessage = (err) => {
   if (err.response?.data?.detail) {
@@ -17,7 +18,7 @@ const getLoginErrorMessage = (err) => {
     return 'Server took too long to respond. Check your network.';
   }
   if (err.message === 'Network Error' || !err.response) {
-    return 'Cannot reach server. Use same Wi-Fi and start backend with: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000';
+    return 'Cannot reach server. Please check your internet connection and try again.';
   }
   return 'Login failed. Try again.';
 };
@@ -80,13 +81,19 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {loading && (
+        <View style={styles.loaderOverlay}>
+          <GeoLoader message="Signing in..." />
+        </View>
+      )}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
       <View style={styles.card}>
         <Text style={styles.title}>Attendance System</Text>
-        <Text style={styles.subtitle}>Login to continue</Text>
+        <Text style={styles.subtitle}>Geo Designs & Research</Text>
+        <Text style={styles.loginHint}>Login to continue</Text>
 
         <TextInput
           style={styles.input}
@@ -128,6 +135,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1a237e',
   },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -149,10 +160,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   subtitle: {
+    fontSize: 13,
+    color: '#1a237e',
+    textAlign: 'center',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  loginHint: {
     fontSize: 14,
     color: '#888',
     textAlign: 'center',
     marginBottom: 28,
+    marginTop: 4,
   },
   input: {
     borderWidth: 1,

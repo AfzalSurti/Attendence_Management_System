@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getUser } from '../utils/storage';
+import { wakeServer } from '../utils/wakeServer';
+import GeoLoader from '../components/GeoLoader';
 
 // Auth
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -29,36 +30,46 @@ import HolidayScreen from '../screens/admin/HolidayScreen';
 
 const Stack = createNativeStackNavigator();
 
+const resolveInitialRoute = async () => {
+  const user = await getUser();
+  if (!user) return 'Login';
+  if (user.role === 'admin') return 'AdminDashboard';
+  if (user.role === 'developer') return 'DevDashboard';
+  return 'Dashboard';
+};
+
 export default function AppNavigator() {
   const [initialRoute, setInitialRoute] = useState(null);
+  const [loadingMessage, setLoadingMessage] = useState('Connecting to server...');
 
   useEffect(() => {
-    checkUser();
+    let mounted = true;
+
+    const bootstrap = async () => {
+      const started = Date.now();
+
+      setLoadingMessage('Waking up server...');
+      await wakeServer();
+
+      if (!mounted) return;
+
+      setLoadingMessage('Loading application...');
+      const route = await resolveInitialRoute();
+
+      const elapsed = Date.now() - started;
+      if (elapsed < 1200) {
+        await new Promise((r) => setTimeout(r, 1200 - elapsed));
+      }
+
+      if (mounted) setInitialRoute(route);
+    };
+
+    bootstrap();
+    return () => { mounted = false; };
   }, []);
 
-  const checkUser = async () => {
-    try {
-      const user = await getUser();
-      if (!user) {
-        setInitialRoute('Login');
-      } else if (user.role === 'admin') {
-        setInitialRoute('AdminDashboard');
-      } else if (user.role === 'developer') {
-        setInitialRoute('DevDashboard');
-      } else {
-        setInitialRoute('Dashboard');
-      }
-    } catch {
-      setInitialRoute('Login');
-    }
-  };
-
   if (!initialRoute) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#1a237e" />
-      </View>
-    );
+    return <GeoLoader message={loadingMessage} />;
   }
 
   return (
@@ -94,12 +105,3 @@ export default function AppNavigator() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-});

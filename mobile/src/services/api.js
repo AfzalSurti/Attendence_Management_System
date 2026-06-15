@@ -32,8 +32,12 @@ api.interceptors.response.use(
   }
 );
 
+// Health check / wake server (long timeout for Render cold start)
+export const pingAPI = () =>
+  api.get('/', { timeout: 90000 });
+
 // Auth
-export const loginAPI = (data) => api.post('/auth/login', data);
+export const loginAPI = (data) => api.post('/auth/login', data, { timeout: 90000 });
 
 // Employee
 export const getMyProjectsAPI = () => api.get('/projects/my-projects');
