@@ -11,17 +11,22 @@ export default function AttendanceScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [location, setLocation] = useState(null);
   const [selfieUri, setSelfieUri] = useState(null);
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const cameraRef = useRef(null);
 
   useEffect(() => {
     loadInitialData();
+    requestLocationOnLoad();
   }, []);
+
+  const requestLocationOnLoad = async () => {
+    await Location.requestForegroundPermissionsAsync();
+  };
 
   const loadInitialData = async () => {
     try {
@@ -36,13 +41,20 @@ export default function AttendanceScreen({ navigation }) {
     }
   };
 
-  const getLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
+  const getCoordinates = async () => {
+    const { status } = await Location.getForegroundPermissionsAsync();
+
     if (status !== 'granted') {
-      Alert.alert('Permission denied', 'Location permission is required');
-      return null;
+      const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+      if (newStatus !== 'granted') {
+        Alert.alert('Permission denied', 'Location permission is required for attendance');
+        return null;
+      }
     }
-    const loc = await Location.getCurrentPositionAsync({});
+
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
     return loc.coords;
   };
 
@@ -66,13 +78,14 @@ export default function AttendanceScreen({ navigation }) {
       return;
     }
 
-    setLoading(true);
+    setGettingLocation(true);
     try {
-      const coords = await getLocation();
-      if (!coords) { setLoading(false); return; }
+      const coords = await getCoordinates();
+      if (!coords) return;
 
-      // Upload selfie — for now use a placeholder URL
-      // We will integrate Cloudinary later
+      setGettingLocation(false);
+      setLoading(true);
+
       const selfie_url = selfieUri;
 
       if (isCheckIn) {
@@ -97,6 +110,7 @@ export default function AttendanceScreen({ navigation }) {
       const msg = err.response?.data?.detail || 'Something went wrong';
       Alert.alert('Error', msg);
     } finally {
+      setGettingLocation(false);
       setLoading(false);
     }
   };
@@ -211,14 +225,17 @@ export default function AttendanceScreen({ navigation }) {
           <TouchableOpacity
             style={styles.submitBtn}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={loading || gettingLocation}
           >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitBtnText}>
-                  {isCheckIn ? 'Submit Check-in' : 'Submit Check-out'}
-                </Text>
-            }
+            {gettingLocation ? (
+              <Text style={styles.submitBtnText}>Getting your location...</Text>
+            ) : loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitBtnText}>
+                {isCheckIn ? 'Submit Check-in' : 'Submit Check-out'}
+              </Text>
+            )}
           </TouchableOpacity>
         </>
       )}

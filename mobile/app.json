@@ -21,10 +21,33 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Attendance System to access your camera for attendance selfies.",
+          "microphonePermission": "Allow Attendance System to access your microphone.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Attendance System to use your location for attendance check-in and check-out.",
+          "locationAlwaysPermission": "Allow Attendance System to use your location for attendance check-in and check-out.",
+          "locationWhenInUsePermission": "Allow Attendance System to use your location to verify your attendance location."
+        }
+      ]
+    ]
   }
 }
