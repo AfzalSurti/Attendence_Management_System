@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.project import Project, EmployeeProject
 from app.models.employee import Employee
-from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, AssignProject
+from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, AssignProject, ProjectDetailResponse, ProjectEmployeeInfo
 from app.routes.employee import get_current_user, require_developer
 from typing import List
 
@@ -50,6 +50,39 @@ def get_my_projects(
     ).all()
     project_ids = [a.project_id for a in assignments]
     return db.query(Project).filter(Project.id.in_(project_ids)).all()
+
+# Get project details with assigned employees
+@router.get("/{project_id}", response_model=ProjectDetailResponse)
+def get_project_details(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    assignments = db.query(EmployeeProject).filter(
+        EmployeeProject.project_id == project_id
+    ).all()
+
+    employees = []
+    for assignment in assignments:
+        employee = db.query(Employee).filter(Employee.id == assignment.employee_id).first()
+        if employee:
+            employees.append(ProjectEmployeeInfo(
+                id=employee.id,
+                name=employee.name,
+                mobile_number=employee.mobile_number,
+            ))
+
+    return ProjectDetailResponse(
+        id=project.id,
+        project_number=project.project_number,
+        project_name=project.project_name,
+        employee_count=len(employees),
+        employees=employees,
+    )
 
 # Update project
 @router.put("/{project_id}", response_model=ProjectResponse)

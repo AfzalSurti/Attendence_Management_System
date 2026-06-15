@@ -48,6 +48,7 @@ export const createEmployeeAPI = (data) => api.post('/employees/', data);
 export const updateEmployeeAPI = (id, data) => api.put(`/employees/${id}`, data);
 export const deleteEmployeeAPI = (id) => api.delete(`/employees/${id}`);
 export const getAllProjectsAPI = () => api.get('/projects/');
+export const getProjectDetailsAPI = (id) => api.get(`/projects/${id}`);
 export const createProjectAPI = (data) => api.post('/projects/', data);
 export const updateProjectAPI = (id, data) => api.put(`/projects/${id}`, data);
 export const deleteProjectAPI = (id) => api.delete(`/projects/${id}`);

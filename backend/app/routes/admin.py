@@ -7,14 +7,14 @@ from app.models.employee import Employee, RoleEnum
 from app.models.project import Project
 from app.models.holiday import Holiday
 from app.schemas.holiday import HolidayCreate, HolidayResponse
-from app.routes.employee import get_current_user, require_developer
+from app.routes.employee import get_current_user
 from typing import List, Optional
 from datetime import date, timedelta
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 def require_admin(current_user: Employee = Depends(get_current_user)):
-    if current_user.role.value != "admin":
+    if current_user.role.value not in ["admin", "developer"]:
         raise HTTPException(status_code=403, detail="Admin access only")
     return current_user
 
@@ -29,7 +29,7 @@ def get_all_attendance(
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Employee = Depends(require_developer)
+    current_user: Employee = Depends(require_admin)
 ):
     query = db.query(Attendance)
 
@@ -167,7 +167,7 @@ def update_attendance(
     attendance_id: int,
     data: dict,
     db: Session = Depends(get_db),
-    current_user: Employee = Depends(require_developer)
+    current_user: Employee = Depends(require_admin)
 ):
     attendance = db.query(Attendance).filter(Attendance.id == attendance_id).first()
     if not attendance:

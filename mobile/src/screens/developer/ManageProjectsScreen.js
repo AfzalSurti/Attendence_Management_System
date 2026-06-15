@@ -97,10 +97,14 @@ export default function ManageProjectsScreen({ navigation }) {
 
   const renderProject = ({ item }) => (
     <View style={styles.card}>
-      <View style={styles.cardInfo}>
+      <TouchableOpacity
+        style={styles.cardInfo}
+        onPress={() => navigation.navigate('ProjectDetails', { project: item })}
+      >
         <Text style={styles.projectCode}>{item.project_number}</Text>
         <Text style={styles.projectName}>{item.project_name}</Text>
-      </View>
+        <Text style={styles.viewHint}>Tap to view details →</Text>
+      </TouchableOpacity>
       <View style={styles.cardActions}>
         <TouchableOpacity
           style={styles.editBtn}
@@ -204,15 +208,14 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff', borderRadius: 16,
     padding: 14, marginBottom: 10, elevation: 3,
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between'
   },
-  cardInfo: { flex: 1 },
+  cardInfo: { flex: 1, marginBottom: 10 },
   projectCode: {
     fontSize: 13, fontWeight: 'bold',
     color: '#1a237e', marginBottom: 2
   },
   projectName: { fontSize: 15, color: '#333' },
+  viewHint: { fontSize: 11, color: '#5c6bc0', marginTop: 6 },
   cardActions: { flexDirection: 'row', gap: 8 },
   editBtn: {
     backgroundColor: '#e3f2fd', padding: 8,
