@@ -6,6 +6,7 @@ import {
 import { getAdminAttendanceAPI, updateAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCoords, coordsToForm, parseCoord } from '../../utils/coordinates';
+import AttendanceSelfies from '../../components/AttendanceSelfies';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '--';
@@ -174,6 +175,10 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
           <Text style={styles.coordsLabel}>Check-in: {formatCoords(item.checkin_latitude, item.checkin_longitude)}</Text>
           <Text style={styles.coordsLabel}>Check-out: {formatCoords(item.checkout_latitude, item.checkout_longitude)}</Text>
         </View>
+        <AttendanceSelfies
+          checkinUrl={item.checkin_selfie_url}
+          checkoutUrl={item.checkout_selfie_url}
+        />
         <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
           <Text style={styles.editBtnText}>Edit</Text>
         </TouchableOpacity>
@@ -226,6 +231,11 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Edit Attendance</Text>
             <Text style={styles.modalDate}>{formatDate(selectedRecord?.date)}</Text>
+
+            <AttendanceSelfies
+              checkinUrl={selectedRecord?.checkin_selfie_url}
+              checkoutUrl={selectedRecord?.checkout_selfie_url}
+            />
 
             <Text style={styles.inputLabel}>Check-in Time (HH:MM)</Text>
             <TextInput

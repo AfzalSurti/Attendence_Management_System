@@ -25,6 +25,11 @@ const escapeCsv = (value) => {
   return str;
 };
 
+const selfieImg = (url) => {
+  if (!url || !url.startsWith('http')) return '--';
+  return `<img src="${url}" style="width:56px;height:56px;object-fit:cover;border-radius:4px;" />`;
+};
+
 const buildRows = (records, includeEmployee = false) =>
   records.map((r) => {
     const base = [
@@ -32,8 +37,10 @@ const buildRows = (records, includeEmployee = false) =>
       r.project_code || '--',
       r.project_name || '--',
       formatTime(r.checkin_time),
+      r.checkin_selfie_url || '--',
       formatCoords(r.checkin_latitude, r.checkin_longitude),
       formatTime(r.checkout_time),
+      r.checkout_selfie_url || '--',
       formatCoords(r.checkout_latitude, r.checkout_longitude),
       r.working_hours != null ? `${r.working_hours}` : '--',
     ];
@@ -46,8 +53,8 @@ const buildRows = (records, includeEmployee = false) =>
 export const buildAttendanceCsv = (employeeName, records, rangeLabel) => {
   const headers = [
     'Date', 'Project Code', 'Project Name',
-    'Check-in Time', 'Check-in Location',
-    'Check-out Time', 'Check-out Location', 'Working Hours',
+    'Check-in Time', 'Check-in Selfie URL', 'Check-in Location',
+    'Check-out Time', 'Check-out Selfie URL', 'Check-out Location', 'Working Hours',
   ];
   const lines = [
     `Employee,${escapeCsv(employeeName)}`,
@@ -63,8 +70,8 @@ export const buildAttendanceCsv = (employeeName, records, rangeLabel) => {
 export const buildBulkAttendanceCsv = (title, records, filterLabel) => {
   const headers = [
     'Employee', 'Mobile', 'Date', 'Project Code', 'Project Name',
-    'Check-in Time', 'Check-in Location',
-    'Check-out Time', 'Check-out Location', 'Working Hours',
+    'Check-in Time', 'Check-in Selfie URL', 'Check-in Location',
+    'Check-out Time', 'Check-out Selfie URL', 'Check-out Location', 'Working Hours',
   ];
   const lines = [
     `Report,${escapeCsv(title)}`,
@@ -84,8 +91,10 @@ const buildAttendanceHtml = (employeeName, records, rangeLabel) => {
       <td>${r.project_code || '--'}</td>
       <td>${r.project_name || '--'}</td>
       <td>${formatTime(r.checkin_time)}</td>
+      <td>${selfieImg(r.checkin_selfie_url)}</td>
       <td>${formatCoords(r.checkin_latitude, r.checkin_longitude)}</td>
       <td>${formatTime(r.checkout_time)}</td>
+      <td>${selfieImg(r.checkout_selfie_url)}</td>
       <td>${formatCoords(r.checkout_latitude, r.checkout_longitude)}</td>
       <td>${r.working_hours != null ? r.working_hours : '--'}</td>
     </tr>
@@ -100,7 +109,7 @@ const buildAttendanceHtml = (employeeName, records, rangeLabel) => {
           h1 { color: #1a237e; font-size: 20px; margin-bottom: 4px; }
           .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
           table { width: 100%; border-collapse: collapse; font-size: 11px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
           th { background: #1a237e; color: #fff; }
           tr:nth-child(even) { background: #f5f5f5; }
         </style>
@@ -115,14 +124,16 @@ const buildAttendanceHtml = (employeeName, records, rangeLabel) => {
               <th>Project Code</th>
               <th>Project</th>
               <th>Check-in</th>
+              <th>Check-in Selfie</th>
               <th>Check-in Location</th>
               <th>Check-out</th>
+              <th>Check-out Selfie</th>
               <th>Check-out Location</th>
               <th>Hours</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="8">No records found</td></tr>'}
+            ${rows || '<tr><td colspan="10">No records found</td></tr>'}
           </tbody>
         </table>
       </body>
@@ -139,8 +150,10 @@ const buildBulkAttendanceHtml = (title, records, filterLabel) => {
       <td>${r.project_code || '--'}</td>
       <td>${r.project_name || '--'}</td>
       <td>${formatTime(r.checkin_time)}</td>
+      <td>${selfieImg(r.checkin_selfie_url)}</td>
       <td>${formatCoords(r.checkin_latitude, r.checkin_longitude)}</td>
       <td>${formatTime(r.checkout_time)}</td>
+      <td>${selfieImg(r.checkout_selfie_url)}</td>
       <td>${formatCoords(r.checkout_latitude, r.checkout_longitude)}</td>
       <td>${r.working_hours != null ? r.working_hours : '--'}</td>
     </tr>
@@ -155,7 +168,7 @@ const buildBulkAttendanceHtml = (title, records, filterLabel) => {
           h1 { color: #1a237e; font-size: 20px; margin-bottom: 4px; }
           .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
           table { width: 100%; border-collapse: collapse; font-size: 10px; }
-          th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+          th, td { border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: top; }
           th { background: #1a237e; color: #fff; }
           tr:nth-child(even) { background: #f5f5f5; }
         </style>
@@ -172,14 +185,16 @@ const buildBulkAttendanceHtml = (title, records, filterLabel) => {
               <th>Project Code</th>
               <th>Project</th>
               <th>Check-in</th>
+              <th>Check-in Selfie</th>
               <th>Check-in Location</th>
               <th>Check-out</th>
+              <th>Check-out Selfie</th>
               <th>Check-out Location</th>
               <th>Hours</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="10">No records found</td></tr>'}
+            ${rows || '<tr><td colspan="12">No records found</td></tr>'}
           </tbody>
         </table>
       </body>

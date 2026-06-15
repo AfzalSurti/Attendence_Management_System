@@ -6,6 +6,7 @@ import {
 import { getAdminAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCoords } from '../../utils/coordinates';
+import AttendanceSelfies from '../../components/AttendanceSelfies';
 import { getDateRange, PRESET_LABELS } from '../../utils/dateRanges';
 import { exportAttendanceExcel, exportAttendancePdf } from '../../utils/reportExport';
 
@@ -134,6 +135,10 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
           Out: {formatCoords(item.checkout_latitude, item.checkout_longitude)}
         </Text>
       </View>
+      <AttendanceSelfies
+        checkinUrl={item.checkin_selfie_url}
+        checkoutUrl={item.checkout_selfie_url}
+      />
     </View>
   );
 

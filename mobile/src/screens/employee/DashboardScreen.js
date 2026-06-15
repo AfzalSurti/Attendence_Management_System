@@ -6,6 +6,7 @@ import {
 import { getUser, clearStorage } from '../../utils/storage';
 import { getTodayAttendanceAPI } from '../../services/api';
 import { formatCoords } from '../../utils/coordinates';
+import AttendanceSelfies from '../../components/AttendanceSelfies';
 
 export default function DashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -91,6 +92,10 @@ export default function DashboardScreen({ navigation }) {
                 {formatCoords(todayAttendance.checkout_latitude, todayAttendance.checkout_longitude)}
               </Text>
             </View>
+            <AttendanceSelfies
+              checkinUrl={todayAttendance.checkin_selfie_url}
+              checkoutUrl={todayAttendance.checkout_selfie_url}
+            />
           </>
         ) : (
           <Text style={styles.noAttendance}>No attendance marked today</Text>

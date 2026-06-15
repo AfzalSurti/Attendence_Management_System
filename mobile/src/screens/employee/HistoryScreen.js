@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { getMyHistoryAPI } from '../../services/api';
 import { formatCoords } from '../../utils/coordinates';
+import AttendanceSelfies from '../../components/AttendanceSelfies';
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
@@ -76,6 +77,10 @@ export default function HistoryScreen({ navigation }) {
           {formatCoords(item.checkout_latitude, item.checkout_longitude)}
         </Text>
       </View>
+      <AttendanceSelfies
+        checkinUrl={item.checkin_selfie_url}
+        checkoutUrl={item.checkout_selfie_url}
+      />
     </View>
   );
 
