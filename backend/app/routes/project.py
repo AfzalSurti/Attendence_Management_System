@@ -102,6 +102,13 @@ def assign_project(
     if existing:
         raise HTTPException(status_code=400, detail="Project already assigned to this employee")
 
+    employee = db.query(Employee).filter(Employee.id == data.employee_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    project = db.query(Project).filter(Project.id == data.project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     assignment = EmployeeProject(
         employee_id=data.employee_id,
         project_id=data.project_id

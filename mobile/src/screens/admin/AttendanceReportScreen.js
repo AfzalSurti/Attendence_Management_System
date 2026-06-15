@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, ScrollView, TextInput, Alert
+  ActivityIndicator, TextInput, Alert
 } from 'react-native';
 import {
   getAdminAttendanceAPI, get30DayReportAPI,
@@ -136,7 +136,6 @@ export default function AttendanceReportScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
@@ -144,75 +143,71 @@ export default function AttendanceReportScreen({ navigation }) {
         <Text style={styles.title}>Attendance Reports</Text>
       </View>
 
-      <ScrollView>
-        {/* Quick Filters */}
-        <View style={styles.quickFilters}>
-          <TouchableOpacity
-            style={[styles.quickBtn, activeFilter === 'all' && styles.quickBtnActive]}
-            onPress={handleAll}
-          >
-            <Text style={[styles.quickBtnText, activeFilter === 'all' && styles.quickBtnTextActive]}>
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.quickBtn, activeFilter === '30days' && styles.quickBtnActive]}
-            onPress={handle30Days}
-          >
-            <Text style={[styles.quickBtnText, activeFilter === '30days' && styles.quickBtnTextActive]}>
-              Last 30 Days
-            </Text>
-          </TouchableOpacity>
-        </View>
+      <FlatList
+        data={records}
+        keyExtractor={(item, index) => String(item.id ?? index)}
+        renderItem={renderRecord}
+        ListHeaderComponent={
+          <>
+            <View style={styles.quickFilters}>
+              <TouchableOpacity
+                style={[styles.quickBtn, activeFilter === 'all' && styles.quickBtnActive]}
+                onPress={handleAll}
+              >
+                <Text style={[styles.quickBtnText, activeFilter === 'all' && styles.quickBtnTextActive]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.quickBtn, activeFilter === '30days' && styles.quickBtnActive]}
+                onPress={handle30Days}
+              >
+                <Text style={[styles.quickBtnText, activeFilter === '30days' && styles.quickBtnTextActive]}>
+                  Last 30 Days
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Advanced Filters */}
-        <View style={styles.filterCard}>
-          <Text style={styles.filterTitle}>Filter Records</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Employee ID"
-            keyboardType="number-pad"
-            value={filters.employee_id}
-            onChangeText={(t) => setFilters({ ...filters, employee_id: t })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Project ID"
-            keyboardType="number-pad"
-            value={filters.project_id}
-            onChangeText={(t) => setFilters({ ...filters, project_id: t })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Date From (YYYY-MM-DD)"
-            value={filters.date_from}
-            onChangeText={(t) => setFilters({ ...filters, date_from: t })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Date To (YYYY-MM-DD)"
-            value={filters.date_to}
-            onChangeText={(t) => setFilters({ ...filters, date_to: t })}
-          />
-          <TouchableOpacity style={styles.filterBtn} onPress={handleFilter}>
-            <Text style={styles.filterBtnText}>Apply Filter</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.filterCard}>
+              <Text style={styles.filterTitle}>Filter Records</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Employee ID"
+                keyboardType="number-pad"
+                value={filters.employee_id}
+                onChangeText={(t) => setFilters({ ...filters, employee_id: t })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Project ID"
+                keyboardType="number-pad"
+                value={filters.project_id}
+                onChangeText={(t) => setFilters({ ...filters, project_id: t })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Date From (YYYY-MM-DD)"
+                value={filters.date_from}
+                onChangeText={(t) => setFilters({ ...filters, date_from: t })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Date To (YYYY-MM-DD)"
+                value={filters.date_to}
+                onChangeText={(t) => setFilters({ ...filters, date_to: t })}
+              />
+              <TouchableOpacity style={styles.filterBtn} onPress={handleFilter}>
+                <Text style={styles.filterBtnText}>Apply Filter</Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Total Count */}
-        <Text style={styles.countText}>{records.length} records found</Text>
-
-        {/* Records */}
-        <FlatList
-          data={records}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={renderRecord}
-          scrollEnabled={false}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No records found</Text>
-          }
-        />
-      </ScrollView>
+            <Text style={styles.countText}>{records.length} records found</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No records found</Text>
+        }
+      />
     </View>
   );
 }

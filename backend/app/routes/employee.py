@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.employee import Employee
+from app.models.employee import Employee, RoleEnum
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse
 from app.utils.auth import hash_password, decode_access_token
 from fastapi.security import OAuth2PasswordBearer
@@ -43,7 +43,7 @@ def create_employee(
         name=data.name,
         mobile_number=data.mobile_number,
         password_hash=hash_password(data.password),
-        role="employee"
+        role=RoleEnum.employee
     )
     db.add(employee)
     db.commit()
@@ -56,7 +56,7 @@ def get_all_employees(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(require_developer)
 ):
-    return db.query(Employee).filter(Employee.role == "employee").all()
+    return db.query(Employee).filter(Employee.role == RoleEnum.employee).all()
 
 # Get single employee
 @router.get("/{employee_id}", response_model=EmployeeResponse)

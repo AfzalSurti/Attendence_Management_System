@@ -5,9 +5,10 @@ from app.models.attendance import Attendance
 from app.models.holiday import Holiday
 from app.models.employee import Employee
 from app.schemas.attendance import CheckInRequest, CheckOutRequest, AttendanceResponse
+from app.models.project import EmployeeProject
 from app.routes.employee import get_current_user
 from typing import List
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
@@ -33,11 +34,18 @@ def check_in(
     if existing:
         raise HTTPException(status_code=400, detail="Already checked in today")
 
+    assignment = db.query(EmployeeProject).filter(
+        EmployeeProject.employee_id == current_user.id,
+        EmployeeProject.project_id == data.project_id,
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=400, detail="Project is not assigned to you")
+
     attendance = Attendance(
         employee_id=current_user.id,
         project_id=data.project_id,
         date=today,
-        checkin_time=datetime.utcnow(),
+        checkin_time=datetime.now(timezone.utc),
         checkin_selfie_url=data.selfie_url,
         checkin_latitude=data.latitude,
         checkin_longitude=data.longitude
@@ -68,11 +76,15 @@ def check_out(
     if attendance.checkout_time:
         raise HTTPException(status_code=400, detail="Already checked out today")
 
-    checkout_time = datetime.utcnow()
+    checkout_time = datetime.now(timezone.utc)
+
+    checkin_time = attendance.checkin_time
+    if checkin_time.tzinfo is None:
+        checkin_time = checkin_time.replace(tzinfo=timezone.utc)
 
     # Calculate working hours
     working_hours = round(
-        (checkout_time - attendance.checkin_time).total_seconds() / 3600, 2
+        (checkout_time - checkin_time).total_seconds() / 3600, 2
     )
 
     attendance.checkout_time = checkout_time

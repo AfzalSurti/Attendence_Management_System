@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.database import get_db
 from app.models.attendance import Attendance
-from app.models.employee import Employee
+from app.models.employee import Employee, RoleEnum
 from app.models.project import Project
 from app.models.holiday import Holiday
 from app.schemas.holiday import HolidayCreate, HolidayResponse
@@ -42,8 +43,8 @@ def get_all_attendance(
         query = query.filter(Attendance.date <= date_to)
     if month and year:
         query = query.filter(
-            db.func.extract("month", Attendance.date) == month,
-            db.func.extract("year", Attendance.date) == year
+            func.extract("month", Attendance.date) == month,
+            func.extract("year", Attendance.date) == year
         )
 
     records = query.order_by(Attendance.date.desc()).all()
@@ -149,7 +150,7 @@ def get_overview(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(require_admin)
 ):
-    total_employees = db.query(Employee).filter(Employee.role == "employee").count()
+    total_employees = db.query(Employee).filter(Employee.role == RoleEnum.employee).count()
     total_projects = db.query(Project).count()
     today_attendance = db.query(Attendance).filter(
         Attendance.date == date.today()

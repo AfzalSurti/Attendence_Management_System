@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getToken } from '../utils/storage';
+import { getToken, clearStorage } from '../utils/storage';
 
 // Use your laptop IPv4 from `ipconfig` — phone must be on the same Wi-Fi
 export const BASE_URL = 'http://10.191.140.220:8000';
@@ -20,6 +20,17 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Clear session on expired/invalid token
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
+      await clearStorage();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth
 export const loginAPI = (data) => api.post('/auth/login', data);
