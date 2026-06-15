@@ -11,9 +11,19 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleMobileChange = (text) => {
+    const digitsOnly = text.replace(/\D/g, '').slice(0, 10);
+    setMobile(digitsOnly);
+  };
+
   const handleLogin = async () => {
     if (!mobile || !password) {
       Alert.alert('Error', 'Please enter mobile number and password');
+      return;
+    }
+
+    if (mobile.length !== 10) {
+      Alert.alert('Error', 'Mobile number must be exactly 10 digits');
       return;
     }
 
@@ -60,9 +70,10 @@ export default function LoginScreen({ navigation }) {
           style={styles.input}
           placeholder="Mobile Number"
           placeholderTextColor="#999"
-          keyboardType="phone-pad"
+          keyboardType="number-pad"
+          maxLength={10}
           value={mobile}
-          onChangeText={setMobile}
+          onChangeText={handleMobileChange}
         />
 
         <TextInput
