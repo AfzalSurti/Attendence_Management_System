@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Modal, TextInput, Alert
+  ActivityIndicator, Modal, TextInput, Alert, ScrollView
 } from 'react-native';
 import { getAdminAttendanceAPI, updateAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { formatCoords, coordsToForm, parseCoord } from '../../utils/coordinates';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '--';
@@ -55,6 +56,10 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
     checkin_time: '',
     checkout_time: '',
     working_hours: '',
+    checkin_latitude: '',
+    checkin_longitude: '',
+    checkout_latitude: '',
+    checkout_longitude: '',
   });
 
   const loadRecords = useCallback(async () => {
@@ -84,6 +89,10 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
       working_hours: record.working_hours != null
         ? String(record.working_hours)
         : calcWorkingHours(checkinIso, checkoutIso),
+      checkin_latitude: coordsToForm(record.checkin_latitude, record.checkin_longitude).latitude,
+      checkin_longitude: coordsToForm(record.checkin_latitude, record.checkin_longitude).longitude,
+      checkout_latitude: coordsToForm(record.checkout_latitude, record.checkout_longitude).latitude,
+      checkout_longitude: coordsToForm(record.checkout_latitude, record.checkout_longitude).longitude,
     });
     setModalVisible(true);
   };
@@ -111,6 +120,10 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
     if (form.checkin_time) payload.checkin_time = checkinIso;
     if (form.checkout_time) payload.checkout_time = checkoutIso;
     if (form.working_hours !== '') payload.working_hours = parseFloat(form.working_hours);
+    if (form.checkin_latitude !== '') payload.checkin_latitude = parseCoord(form.checkin_latitude);
+    if (form.checkin_longitude !== '') payload.checkin_longitude = parseCoord(form.checkin_longitude);
+    if (form.checkout_latitude !== '') payload.checkout_latitude = parseCoord(form.checkout_latitude);
+    if (form.checkout_longitude !== '') payload.checkout_longitude = parseCoord(form.checkout_longitude);
 
     setSaving(true);
     try {
@@ -156,6 +169,10 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
               {item.working_hours != null ? `${item.working_hours}h` : '--'}
             </Text>
           </View>
+        </View>
+        <View style={styles.coordsSection}>
+          <Text style={styles.coordsLabel}>Check-in: {formatCoords(item.checkin_latitude, item.checkin_longitude)}</Text>
+          <Text style={styles.coordsLabel}>Check-out: {formatCoords(item.checkout_latitude, item.checkout_longitude)}</Text>
         </View>
         <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
           <Text style={styles.editBtnText}>Edit</Text>
@@ -205,6 +222,7 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
 
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={styles.modalScroll}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Edit Attendance</Text>
             <Text style={styles.modalDate}>{formatDate(selectedRecord?.date)}</Text>
@@ -234,6 +252,42 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
               onChangeText={(t) => updateForm('working_hours', t)}
             />
 
+            <Text style={styles.sectionTitle}>Check-in Location</Text>
+            <Text style={styles.inputLabel}>Latitude</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="22.31123"
+              keyboardType="decimal-pad"
+              value={form.checkin_latitude}
+              onChangeText={(t) => updateForm('checkin_latitude', t)}
+            />
+            <Text style={styles.inputLabel}>Longitude</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="73.23250"
+              keyboardType="decimal-pad"
+              value={form.checkin_longitude}
+              onChangeText={(t) => updateForm('checkin_longitude', t)}
+            />
+
+            <Text style={styles.sectionTitle}>Check-out Location</Text>
+            <Text style={styles.inputLabel}>Latitude</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="22.31123"
+              keyboardType="decimal-pad"
+              value={form.checkout_latitude}
+              onChangeText={(t) => updateForm('checkout_latitude', t)}
+            />
+            <Text style={styles.inputLabel}>Longitude</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="73.23250"
+              keyboardType="decimal-pad"
+              value={form.checkout_longitude}
+              onChangeText={(t) => updateForm('checkout_longitude', t)}
+            />
+
             <TouchableOpacity
               style={styles.saveBtn}
               onPress={handleSave}
@@ -250,6 +304,7 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -283,6 +338,8 @@ const styles = StyleSheet.create({
   timeBlock: { alignItems: 'center', flex: 1 },
   timeLabel: { fontSize: 11, color: '#888' },
   timeValue: { fontSize: 13, fontWeight: 'bold', color: '#333', marginTop: 2 },
+  coordsSection: { marginBottom: 12, gap: 4 },
+  coordsLabel: { fontSize: 12, color: '#555' },
   editBtn: {
     backgroundColor: '#e8eaf6', padding: 10,
     borderRadius: 8, alignItems: 'center',
@@ -292,14 +349,16 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 16, color: '#666', marginBottom: 16 },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center', padding: 20,
+    justifyContent: 'center', padding: 20,
   },
+  modalScroll: { flexGrow: 1, justifyContent: 'center' },
   modalCard: {
     backgroundColor: '#fff', borderRadius: 16,
     padding: 24, width: '100%',
   },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a237e', marginBottom: 4 },
   modalDate: { fontSize: 13, color: '#888', marginBottom: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: 'bold', color: '#1a237e', marginBottom: 8, marginTop: 4 },
   inputLabel: { fontSize: 13, color: '#1a237e', fontWeight: 'bold', marginBottom: 6 },
   input: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,

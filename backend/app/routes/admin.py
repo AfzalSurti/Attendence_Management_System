@@ -88,13 +88,18 @@ def get_30_day_report(
         employee = db.query(Employee).filter(Employee.id == record.employee_id).first()
         project = db.query(Project).filter(Project.id == record.project_id).first()
         result.append({
+            "id": record.id,
             "employee_name": employee.name if employee else None,
             "mobile_number": employee.mobile_number if employee else None,
             "project_code": project.project_number if project else None,
             "project_name": project.project_name if project else None,
             "date": record.date,
             "checkin_time": record.checkin_time,
+            "checkin_latitude": record.checkin_latitude,
+            "checkin_longitude": record.checkin_longitude,
             "checkout_time": record.checkout_time,
+            "checkout_latitude": record.checkout_latitude,
+            "checkout_longitude": record.checkout_longitude,
             "working_hours": record.working_hours
         })
     return result
@@ -178,6 +183,14 @@ def update_attendance(
         attendance.checkout_time = data["checkout_time"]
     if "working_hours" in data:
         attendance.working_hours = data["working_hours"]
+    if "checkin_latitude" in data:
+        attendance.checkin_latitude = data["checkin_latitude"]
+    if "checkin_longitude" in data:
+        attendance.checkin_longitude = data["checkin_longitude"]
+    if "checkout_latitude" in data:
+        attendance.checkout_latitude = data["checkout_latitude"]
+    if "checkout_longitude" in data:
+        attendance.checkout_longitude = data["checkout_longitude"]
     db.commit()
     db.refresh(attendance)
     return {"message": "Attendance updated successfully"}

@@ -7,6 +7,7 @@ import {
   getAdminAttendanceAPI, get30DayReportAPI,
   getAllEmployeesAPI, getAllProjectsAPI
 } from '../../services/api';
+import { formatCoords } from '../../utils/coordinates';
 
 export default function AttendanceReportScreen({ navigation }) {
   const [records, setRecords] = useState([]);
@@ -122,6 +123,20 @@ export default function AttendanceReportScreen({ navigation }) {
           <Text style={styles.timeLabel}>Hours</Text>
           <Text style={styles.timeValue}>
             {item.working_hours ? `${item.working_hours}h` : '--'}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.coordsRow}>
+        <View style={styles.coordsBlock}>
+          <Text style={styles.timeLabel}>Check-in Location</Text>
+          <Text style={styles.coordsValue}>
+            {formatCoords(item.checkin_latitude, item.checkin_longitude)}
+          </Text>
+        </View>
+        <View style={styles.coordsBlock}>
+          <Text style={styles.timeLabel}>Check-out Location</Text>
+          <Text style={styles.coordsValue}>
+            {formatCoords(item.checkout_latitude, item.checkout_longitude)}
           </Text>
         </View>
       </View>
@@ -262,5 +277,8 @@ const styles = StyleSheet.create({
   timeBlock: { alignItems: 'center' },
   timeLabel: { fontSize: 11, color: '#888' },
   timeValue: { fontSize: 13, fontWeight: 'bold', color: '#333', marginTop: 2 },
+  coordsRow: { marginTop: 10, gap: 8 },
+  coordsBlock: { marginBottom: 4 },
+  coordsValue: { fontSize: 12, color: '#444', marginTop: 2 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 15 },
 });

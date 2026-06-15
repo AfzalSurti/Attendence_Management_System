@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { getUser, clearStorage } from '../../utils/storage';
 import { getTodayAttendanceAPI } from '../../services/api';
+import { formatCoords } from '../../utils/coordinates';
 
 export default function DashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -76,6 +77,18 @@ export default function DashboardScreen({ navigation }) {
               <Text style={styles.label}>Working Hours</Text>
               <Text style={styles.value}>
                 {todayAttendance.working_hours ? `${todayAttendance.working_hours} hrs` : '--'}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Check-in Location</Text>
+              <Text style={styles.value}>
+                {formatCoords(todayAttendance.checkin_latitude, todayAttendance.checkin_longitude)}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Check-out Location</Text>
+              <Text style={styles.value}>
+                {formatCoords(todayAttendance.checkout_latitude, todayAttendance.checkout_longitude)}
               </Text>
             </View>
           </>

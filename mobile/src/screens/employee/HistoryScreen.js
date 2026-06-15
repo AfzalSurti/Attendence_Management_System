@@ -4,6 +4,7 @@ import {
   ActivityIndicator, TouchableOpacity
 } from 'react-native';
 import { getMyHistoryAPI } from '../../services/api';
+import { formatCoords } from '../../utils/coordinates';
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
@@ -61,6 +62,18 @@ export default function HistoryScreen({ navigation }) {
         <Text style={styles.label}>Working Hours</Text>
         <Text style={styles.value}>
           {item.working_hours ? `${item.working_hours} hrs` : '--'}
+        </Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Check-in Location</Text>
+        <Text style={styles.value}>
+          {formatCoords(item.checkin_latitude, item.checkin_longitude)}
+        </Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Check-out Location</Text>
+        <Text style={styles.value}>
+          {formatCoords(item.checkout_latitude, item.checkout_longitude)}
         </Text>
       </View>
     </View>
