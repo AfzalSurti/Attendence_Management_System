@@ -37,12 +37,22 @@ export default function ManageEmployeesScreen({ navigation }) {
   };
 
   const handleCreate = async () => {
-    if (!form.name || !form.mobile_number || !form.password) {
+    const cleanName = form.name.trim();
+    const cleanMobile = form.mobile_number.trim();
+    if (!cleanName || !cleanMobile || !form.password) {
       Alert.alert('Error', 'All fields are required');
       return;
     }
+    if (!/^\d{10}$/.test(cleanMobile)) {
+      Alert.alert('Error', 'Mobile number must be exactly 10 digits');
+      return;
+    }
+    if (form.password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
     try {
-      await createEmployeeAPI(form);
+      await createEmployeeAPI({ ...form, name: cleanName, mobile_number: cleanMobile });
       Alert.alert('Success', 'Employee created successfully');
       setModalVisible(false);
       setForm({ name: '', mobile_number: '', password: '' });
@@ -53,8 +63,26 @@ export default function ManageEmployeesScreen({ navigation }) {
   };
 
   const handleUpdate = async () => {
+    const cleanName = form.name.trim();
+    const cleanMobile = form.mobile_number.trim();
+    if (!cleanName || !cleanMobile) {
+      Alert.alert('Error', 'Name and mobile number are required');
+      return;
+    }
+    if (!/^\d{10}$/.test(cleanMobile)) {
+      Alert.alert('Error', 'Mobile number must be exactly 10 digits');
+      return;
+    }
+    if (form.password && form.password.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters');
+      return;
+    }
     try {
-      await updateEmployeeAPI(selectedEmployee.id, form);
+      await updateEmployeeAPI(selectedEmployee.id, {
+        ...form,
+        name: cleanName,
+        mobile_number: cleanMobile,
+      });
       Alert.alert('Success', 'Employee updated successfully');
       setModalVisible(false);
       setForm({ name: '', mobile_number: '', password: '' });
@@ -197,19 +225,23 @@ export default function ManageEmployeesScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Full Name"
+              placeholderTextColor="#999"
               value={form.name}
               onChangeText={(t) => setForm({ ...form, name: t })}
             />
             <TextInput
               style={styles.input}
               placeholder="Mobile Number"
+              placeholderTextColor="#999"
               keyboardType="phone-pad"
+              maxLength={10}
               value={form.mobile_number}
-              onChangeText={(t) => setForm({ ...form, mobile_number: t })}
+              onChangeText={(t) => setForm({ ...form, mobile_number: t.replace(/\D/g, '') })}
             />
             <TextInput
               style={styles.input}
               placeholder={isEditing ? 'New Password (leave blank to keep)' : 'Password'}
+              placeholderTextColor="#999"
               secureTextEntry
               value={form.password}
               onChangeText={(t) => setForm({ ...form, password: t })}
