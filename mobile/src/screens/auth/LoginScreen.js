@@ -27,6 +27,7 @@ export default function LoginScreen({ navigation }) {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleMobileChange = (text) => {
     const digitsOnly = text.replace(/\D/g, '').slice(0, 10);
@@ -105,14 +106,24 @@ export default function LoginScreen({ navigation }) {
           onChangeText={handleMobileChange}
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.passwordWrap}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Password"
+            placeholderTextColor="#999"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setShowPassword((prev) => !prev)}
+          >
+            <Text style={styles.passwordToggleText}>
+              {showPassword ? 'Hide' : 'Show'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.button}
@@ -181,6 +192,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 16,
     color: '#333',
+  },
+  passwordWrap: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    marginBottom: 0,
+    paddingRight: 70,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 12,
+    top: 14,
+  },
+  passwordToggleText: {
+    color: '#1a237e',
+    fontWeight: '700',
+    fontSize: 13,
   },
   button: {
     backgroundColor: '#1a237e',
