@@ -6,7 +6,7 @@ import {
 import {
   getAllEmployeesAPI, createEmployeeAPI,
   updateEmployeeAPI, deleteEmployeeAPI,
-  getAllProjectsAPI, assignProjectAPI, removeAssignmentAPI
+  getAllProjectsAPI, getProjectDetailsAPI, removeAssignmentAPI
 } from '../../services/api';
 
 export default function ManageEmployeesScreen({ navigation }) {
@@ -16,6 +16,8 @@ export default function ManageEmployeesScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [assignedProjects, setAssignedProjects] = useState([]);
+  const [loadingAssignedProjects, setLoadingAssignedProjects] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ name: '', mobile_number: '', password: '' });
 
@@ -127,25 +129,60 @@ export default function ManageEmployeesScreen({ navigation }) {
     setModalVisible(true);
   };
 
-  const handleAssignProject = async (projectId) => {
+  const openProjectsModal = async (employee) => {
+    setSelectedEmployee(employee);
+    setAssignModalVisible(true);
+    setLoadingAssignedProjects(true);
     try {
-      await assignProjectAPI({
-        employee_id: selectedEmployee.id,
-        project_id: projectId
-      });
-      Alert.alert('Success', 'Project assigned');
+      const details = await Promise.all(
+        projects.map((project) => getProjectDetailsAPI(project.id).catch(() => null))
+      );
+      const mappedProjects = details
+        .map((res) => res?.data)
+        .filter((project) =>
+          project?.employees?.some((emp) => emp.id === employee.id)
+        )
+        .map((project) => ({
+          id: project.id,
+          project_number: project.project_number,
+          project_name: project.project_name,
+        }));
+      setAssignedProjects(mappedProjects);
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.detail || 'Failed to assign');
+      Alert.alert('Error', 'Failed to load assigned projects');
+      setAssignedProjects([]);
+    } finally {
+      setLoadingAssignedProjects(false);
     }
   };
 
-  const handleRemoveProject = async (projectId) => {
-    try {
-      await removeAssignmentAPI(selectedEmployee.id, projectId);
-      Alert.alert('Success', 'Project removed');
-    } catch (err) {
-      Alert.alert('Error', 'Failed to remove project');
-    }
+  const handleRemoveProject = async (project) => {
+    if (!selectedEmployee) return;
+    Alert.alert(
+      'Remove Project Assignment',
+      `Are you sure you want to remove ${selectedEmployee.name} from ${project.project_name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeAssignmentAPI(selectedEmployee.id, project.id);
+              setAssignedProjects((prev) => prev.filter((p) => p.id !== project.id));
+              Alert.alert('Success', 'Project removed');
+            } catch (err) {
+              Alert.alert('Error', 'Failed to remove project');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const closeProjectsModal = () => {
+    setAssignModalVisible(false);
+    setAssignedProjects([]);
   };
 
   const renderEmployee = ({ item }) => (
@@ -163,7 +200,7 @@ export default function ManageEmployeesScreen({ navigation }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.assignBtn}
-          onPress={() => { setSelectedEmployee(item); setAssignModalVisible(true); }}
+          onPress={() => openProjectsModal(item)}
         >
           <Text style={styles.assignBtnText}>Projects</Text>
         </TouchableOpacity>
@@ -269,34 +306,34 @@ export default function ManageEmployeesScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              Assign Projects to {selectedEmployee?.name}
+              Projects Assigned to {selectedEmployee?.name}
             </Text>
-            <ScrollView style={{ maxHeight: 300 }}>
-              {projects.map((proj) => (
-                <View key={proj.id} style={styles.projectRow}>
-                  <Text style={styles.projectText}>
-                    {proj.project_number} — {proj.project_name}
-                  </Text>
-                  <View style={styles.projectBtns}>
-                    <TouchableOpacity
-                      style={styles.assignSmallBtn}
-                      onPress={() => handleAssignProject(proj.id)}
-                    >
-                      <Text style={styles.assignSmallText}>Assign</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.removeSmallBtn}
-                      onPress={() => handleRemoveProject(proj.id)}
-                    >
-                      <Text style={styles.removeSmallText}>Remove</Text>
-                    </TouchableOpacity>
+            {loadingAssignedProjects ? (
+              <ActivityIndicator size="small" color="#1a237e" />
+            ) : (
+              <ScrollView style={{ maxHeight: 300 }}>
+                {assignedProjects.length ? assignedProjects.map((proj) => (
+                  <View key={proj.id} style={styles.projectRow}>
+                    <Text style={styles.projectText}>
+                      {proj.project_number} — {proj.project_name}
+                    </Text>
+                    <View style={styles.projectBtns}>
+                      <TouchableOpacity
+                        style={styles.removeSmallBtn}
+                        onPress={() => handleRemoveProject(proj)}
+                      >
+                        <Text style={styles.removeSmallText}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </ScrollView>
+                )) : (
+                  <Text style={styles.emptyText}>No projects assigned to this employee</Text>
+                )}
+              </ScrollView>
+            )}
             <TouchableOpacity
               style={styles.cancelBtn}
-              onPress={() => setAssignModalVisible(false)}
+              onPress={closeProjectsModal}
             >
               <Text style={styles.cancelBtnText}>Close</Text>
             </TouchableOpacity>
@@ -379,11 +416,6 @@ const styles = StyleSheet.create({
   },
   projectText: { fontSize: 13, color: '#333', flex: 1 },
   projectBtns: { flexDirection: 'row', gap: 6 },
-  assignSmallBtn: {
-    backgroundColor: '#e8f5e9', padding: 6,
-    borderRadius: 6
-  },
-  assignSmallText: { color: '#2e7d32', fontSize: 11, fontWeight: 'bold' },
   removeSmallBtn: {
     backgroundColor: '#ffebee', padding: 6,
     borderRadius: 6
