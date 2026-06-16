@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { getHolidaysAPI, addHolidayAPI, deleteHolidayAPI } from '../../services/api';
 
 export default function HolidayScreen({ navigation }) {
@@ -10,6 +11,7 @@ export default function HolidayScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState({ holiday_date: '', holiday_name: '' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => { loadHolidays(); }, []);
 
@@ -123,12 +125,27 @@ export default function HolidayScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add Holiday</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Date (YYYY-MM-DD)"
-              value={form.holiday_date}
-              onChangeText={(t) => setForm({ ...form, holiday_date: t })}
-            />
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={form.holiday_date ? styles.dateText : styles.datePlaceholder}>
+                {form.holiday_date || 'Select Holiday Date'}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                mode="date"
+                display="default"
+                value={new Date(form.holiday_date || new Date().toISOString())}
+                onChange={(_, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (!selectedDate) return;
+                  const iso = selectedDate.toISOString().slice(0, 10);
+                  setForm((prev) => ({ ...prev, holiday_date: iso }));
+                }}
+              />
+            )}
             <TextInput
               style={styles.input}
               placeholder="Holiday Name (e.g. Diwali)"
@@ -193,6 +210,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     padding: 12, fontSize: 14, marginBottom: 12, color: '#333'
   },
+  dateField: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
+    padding: 12, marginBottom: 12,
+  },
+  dateText: { color: '#333', fontSize: 14 },
+  datePlaceholder: { color: '#999', fontSize: 14 },
   submitBtn: {
     backgroundColor: '#1a237e', padding: 14,
     borderRadius: 10, alignItems: 'center', marginBottom: 8

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, TextInput, Alert, ScrollView,
+  ActivityIndicator, Alert, ScrollView, Modal,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { getAdminAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCoords } from '../../utils/coordinates';
@@ -32,6 +33,10 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
   const [activePreset, setActivePreset] = useState('all');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [draftFrom, setDraftFrom] = useState('');
+  const [draftTo, setDraftTo] = useState('');
+  const [datePickerTarget, setDatePickerTarget] = useState(null);
 
   const getRangeLabel = useCallback(() => {
     if (activePreset === 'custom') {
@@ -77,13 +82,26 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
     setActivePreset(preset);
   };
 
-  const applyCustomRange = () => {
-    if (!customFrom && !customTo) {
-      Alert.alert('Error', 'Enter at least one date (YYYY-MM-DD)');
+  const openCustomModal = () => {
+    setDraftFrom(customFrom);
+    setDraftTo(customTo);
+    setCustomModalVisible(true);
+  };
+
+  const applyCustomModalRange = () => {
+    if (!draftFrom && !draftTo) {
+      Alert.alert('Error', 'Select at least one date');
       return;
     }
+    if (draftFrom && draftTo && new Date(draftFrom) > new Date(draftTo)) {
+      Alert.alert('Error', 'From date cannot be after To date');
+      return;
+    }
+    setCustomFrom(draftFrom);
+    setCustomTo(draftTo);
+    setCustomModalVisible(false);
     setActivePreset('custom');
-    loadRecords('custom', customFrom, customTo);
+    loadRecords('custom', draftFrom, draftTo);
   };
 
   const handleExport = async (type) => {
@@ -174,24 +192,9 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
         ))}
       </ScrollView>
 
-      <View style={styles.customCard}>
-        <Text style={styles.customTitle}>Custom Date Range</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="From (YYYY-MM-DD)"
-          value={customFrom}
-          onChangeText={setCustomFrom}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="To (YYYY-MM-DD)"
-          value={customTo}
-          onChangeText={setCustomTo}
-        />
-        <TouchableOpacity style={styles.applyBtn} onPress={applyCustomRange}>
-          <Text style={styles.applyBtnText}>Apply Custom Range</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.customOpenBtn} onPress={openCustomModal}>
+        <Text style={styles.customOpenBtnText}>Select Custom Date Range</Text>
+      </TouchableOpacity>
 
       <View style={styles.exportRow}>
         <TouchableOpacity
@@ -234,6 +237,57 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
           }
         />
       )}
+
+      <Modal visible={customModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.customTitle}>Custom Date Range</Text>
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => setDatePickerTarget('from')}
+            >
+              <Text style={draftFrom ? styles.dateFieldValue : styles.dateFieldPlaceholder}>
+                {draftFrom || 'Select From Date'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => setDatePickerTarget('to')}
+            >
+              <Text style={draftTo ? styles.dateFieldValue : styles.dateFieldPlaceholder}>
+                {draftTo || 'Select To Date'}
+              </Text>
+            </TouchableOpacity>
+
+            {datePickerTarget && (
+              <DateTimePicker
+                mode="date"
+                display="default"
+                value={new Date(
+                  (datePickerTarget === 'from' ? draftFrom : draftTo) || new Date().toISOString()
+                )}
+                onChange={(_, selectedDate) => {
+                  setDatePickerTarget(null);
+                  if (!selectedDate) return;
+                  const iso = selectedDate.toISOString().slice(0, 10);
+                  if (datePickerTarget === 'from') setDraftFrom(iso);
+                  else setDraftTo(iso);
+                }}
+              />
+            )}
+
+            <TouchableOpacity style={styles.applyBtn} onPress={applyCustomModalRange}>
+              <Text style={styles.applyBtnText}>Apply Custom Range</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setCustomModalVisible(false)}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -253,20 +307,49 @@ const styles = StyleSheet.create({
   presetBtnActive: { backgroundColor: '#1a237e' },
   presetText: { fontSize: 12, fontWeight: 'bold', color: '#1a237e' },
   presetTextActive: { color: '#fff' },
-  customCard: {
-    backgroundColor: '#fff', borderRadius: 16,
-    padding: 14, marginBottom: 12, elevation: 3,
+  customOpenBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#c5cae9',
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: 12,
   },
+  customOpenBtnText: { color: '#1a237e', fontWeight: '700', fontSize: 13 },
   customTitle: { fontSize: 14, fontWeight: 'bold', color: '#1a237e', marginBottom: 10 },
-  input: {
+  dateField: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     padding: 10, fontSize: 13, marginBottom: 8, color: '#333',
   },
+  dateFieldValue: { color: '#333', fontSize: 13 },
+  dateFieldPlaceholder: { color: '#999', fontSize: 13 },
   applyBtn: {
     backgroundColor: '#3949ab', padding: 10,
     borderRadius: 10, alignItems: 'center',
   },
   applyBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+  },
+  cancelBtn: {
+    marginTop: 8,
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelBtnText: { color: '#666', fontWeight: '700', fontSize: 13 },
   exportRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   exportBtn: {
     flex: 1, backgroundColor: '#c62828', padding: 12,
