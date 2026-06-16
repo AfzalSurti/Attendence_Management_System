@@ -51,7 +51,8 @@
           "locationAlwaysPermission": "Allow Attendance System to use your location for attendance check-in and check-out.",
           "locationWhenInUsePermission": "Allow Attendance System to use your location to verify your attendance location."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
