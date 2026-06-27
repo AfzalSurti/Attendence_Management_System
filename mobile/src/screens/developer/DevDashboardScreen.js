@@ -91,7 +91,7 @@ export default function DevDashboardScreen({ navigation }) {
         <Text style={styles.menuIcon}>📁</Text>
         <View>
           <Text style={styles.menuTitle}>Manage Projects</Text>
-          <Text style={styles.menuSub}>Create, assign, delete projects</Text>
+          <Text style={styles.menuSub}>Create, edit, delete projects</Text>
         </View>
         <Text style={styles.arrow}>›</Text>
       </TouchableOpacity>

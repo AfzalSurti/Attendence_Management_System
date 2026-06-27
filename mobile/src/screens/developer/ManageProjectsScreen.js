@@ -174,12 +174,14 @@ export default function ManageProjectsScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Project Code (e.g. RD-001)"
+              placeholderTextColor="#999"
               value={form.project_number}
               onChangeText={(t) => setForm({ ...form, project_number: t })}
             />
             <TextInput
               style={styles.input}
               placeholder="Project Name (e.g. Road Project A)"
+              placeholderTextColor="#999"
               value={form.project_name}
               onChangeText={(t) => setForm({ ...form, project_name: t })}
             />

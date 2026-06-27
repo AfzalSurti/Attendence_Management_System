@@ -6,20 +6,27 @@ import {
 import {
   getAllEmployeesAPI, createEmployeeAPI,
   updateEmployeeAPI, deleteEmployeeAPI,
-  getAllProjectsAPI, getProjectDetailsAPI, removeAssignmentAPI
+  getAllProjectsAPI, getProjectDetailsAPI,
+  createProjectAPI, assignProjectAPI, removeAssignmentAPI
 } from '../../services/api';
+
+const emptyNewProject = () => ({ project_number: '', project_name: '' });
 
 export default function ManageEmployeesScreen({ navigation }) {
   const [employees, setEmployees] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [assignedProjects, setAssignedProjects] = useState([]);
+  const [unassignedProjects, setUnassignedProjects] = useState([]);
   const [loadingAssignedProjects, setLoadingAssignedProjects] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ name: '', mobile_number: '', password: '' });
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [newProject, setNewProject] = useState(emptyNewProject());
 
   useEffect(() => { loadData(); }, []);
 
@@ -38,11 +45,42 @@ export default function ManageEmployeesScreen({ navigation }) {
     }
   };
 
+  const resetFormState = () => {
+    setForm({ name: '', mobile_number: '', password: '' });
+    setSelectedProjectIds([]);
+    setNewProject(emptyNewProject());
+  };
+
+  const toggleProjectSelection = (projectId) => {
+    setSelectedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const assignProjectsToEmployee = async (employeeId, projectIds) => {
+    for (const projectId of projectIds) {
+      try {
+        await assignProjectAPI({ employee_id: employeeId, project_id: projectId });
+      } catch (err) {
+        const detail = err.response?.data?.detail;
+        if (detail !== 'Project already assigned to this employee') {
+          throw err;
+        }
+      }
+    }
+  };
+
   const handleCreate = async () => {
     const cleanName = form.name.trim();
     const cleanMobile = form.mobile_number.trim();
+    const cleanProjectNumber = newProject.project_number.trim();
+    const cleanProjectName = newProject.project_name.trim();
+    const hasPartialNewProject = cleanProjectNumber || cleanProjectName;
+
     if (!cleanName || !cleanMobile || !form.password) {
-      Alert.alert('Error', 'All fields are required');
+      Alert.alert('Error', 'Name, mobile number and password are required');
       return;
     }
     if (!/^\d{10}$/.test(cleanMobile)) {
@@ -53,14 +91,41 @@ export default function ManageEmployeesScreen({ navigation }) {
       Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
+    if (hasPartialNewProject && (!cleanProjectNumber || !cleanProjectName)) {
+      Alert.alert('Error', 'Enter both project code and project name to create a new project');
+      return;
+    }
+
+    setSaving(true);
     try {
-      await createEmployeeAPI({ ...form, name: cleanName, mobile_number: cleanMobile });
+      const res = await createEmployeeAPI({
+        ...form,
+        name: cleanName,
+        mobile_number: cleanMobile,
+      });
+      const employeeId = res.data.id;
+      const projectIds = [...selectedProjectIds];
+
+      if (cleanProjectNumber && cleanProjectName) {
+        const projectRes = await createProjectAPI({
+          project_number: cleanProjectNumber,
+          project_name: cleanProjectName,
+        });
+        projectIds.push(projectRes.data.id);
+      }
+
+      if (projectIds.length) {
+        await assignProjectsToEmployee(employeeId, [...new Set(projectIds)]);
+      }
+
       Alert.alert('Success', 'Employee created successfully');
       setModalVisible(false);
-      setForm({ name: '', mobile_number: '', password: '' });
+      resetFormState();
       loadData();
     } catch (err) {
       Alert.alert('Error', err.response?.data?.detail || 'Failed to create employee');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -79,6 +144,8 @@ export default function ManageEmployeesScreen({ navigation }) {
       Alert.alert('Error', 'New password must be at least 6 characters');
       return;
     }
+
+    setSaving(true);
     try {
       await updateEmployeeAPI(selectedEmployee.id, {
         ...form,
@@ -87,10 +154,12 @@ export default function ManageEmployeesScreen({ navigation }) {
       });
       Alert.alert('Success', 'Employee updated successfully');
       setModalVisible(false);
-      setForm({ name: '', mobile_number: '', password: '' });
+      resetFormState();
       loadData();
     } catch (err) {
       Alert.alert('Error', err.response?.data?.detail || 'Failed to update employee');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -119,14 +188,35 @@ export default function ManageEmployeesScreen({ navigation }) {
     setIsEditing(true);
     setSelectedEmployee(employee);
     setForm({ name: employee.name, mobile_number: employee.mobile_number, password: '' });
+    setSelectedProjectIds([]);
+    setNewProject(emptyNewProject());
     setModalVisible(true);
   };
 
   const openCreateModal = () => {
     setIsEditing(false);
     setSelectedEmployee(null);
-    setForm({ name: '', mobile_number: '', password: '' });
+    resetFormState();
     setModalVisible(true);
+  };
+
+  const loadEmployeeProjects = async (employee) => {
+    const details = await Promise.all(
+      projects.map((project) => getProjectDetailsAPI(project.id).catch(() => null))
+    );
+    const assigned = details
+      .map((res) => res?.data)
+      .filter((project) =>
+        project?.employees?.some((emp) => emp.id === employee.id)
+      )
+      .map((project) => ({
+        id: project.id,
+        project_number: project.project_number,
+        project_name: project.project_name,
+      }));
+    const assignedIds = new Set(assigned.map((p) => p.id));
+    const unassigned = projects.filter((p) => !assignedIds.has(p.id));
+    return { assigned, unassigned };
   };
 
   const openProjectsModal = async (employee) => {
@@ -134,25 +224,30 @@ export default function ManageEmployeesScreen({ navigation }) {
     setAssignModalVisible(true);
     setLoadingAssignedProjects(true);
     try {
-      const details = await Promise.all(
-        projects.map((project) => getProjectDetailsAPI(project.id).catch(() => null))
-      );
-      const mappedProjects = details
-        .map((res) => res?.data)
-        .filter((project) =>
-          project?.employees?.some((emp) => emp.id === employee.id)
-        )
-        .map((project) => ({
-          id: project.id,
-          project_number: project.project_number,
-          project_name: project.project_name,
-        }));
-      setAssignedProjects(mappedProjects);
+      const { assigned, unassigned } = await loadEmployeeProjects(employee);
+      setAssignedProjects(assigned);
+      setUnassignedProjects(unassigned);
     } catch (err) {
       Alert.alert('Error', 'Failed to load assigned projects');
       setAssignedProjects([]);
+      setUnassignedProjects([]);
     } finally {
       setLoadingAssignedProjects(false);
+    }
+  };
+
+  const handleAssignProject = async (project) => {
+    if (!selectedEmployee) return;
+    try {
+      await assignProjectAPI({
+        employee_id: selectedEmployee.id,
+        project_id: project.id,
+      });
+      setAssignedProjects((prev) => [...prev, project]);
+      setUnassignedProjects((prev) => prev.filter((p) => p.id !== project.id));
+      Alert.alert('Success', 'Project assigned');
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.detail || 'Failed to assign project');
     }
   };
 
@@ -170,6 +265,7 @@ export default function ManageEmployeesScreen({ navigation }) {
             try {
               await removeAssignmentAPI(selectedEmployee.id, project.id);
               setAssignedProjects((prev) => prev.filter((p) => p.id !== project.id));
+              setUnassignedProjects((prev) => [...prev, project]);
               Alert.alert('Success', 'Project removed');
             } catch (err) {
               Alert.alert('Error', 'Failed to remove project');
@@ -183,6 +279,7 @@ export default function ManageEmployeesScreen({ navigation }) {
   const closeProjectsModal = () => {
     setAssignModalVisible(false);
     setAssignedProjects([]);
+    setUnassignedProjects([]);
   };
 
   const renderEmployee = ({ item }) => (
@@ -228,7 +325,6 @@ export default function ManageEmployeesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
@@ -236,12 +332,10 @@ export default function ManageEmployeesScreen({ navigation }) {
         <Text style={styles.title}>Manage Employees</Text>
       </View>
 
-      {/* Add Button */}
       <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
         <Text style={styles.addBtnText}>+ Add Employee</Text>
       </TouchableOpacity>
 
-      {/* List */}
       <FlatList
         data={employees}
         keyExtractor={(item) => item.id.toString()}
@@ -252,89 +346,151 @@ export default function ManageEmployeesScreen({ navigation }) {
         }
       />
 
-      {/* Create/Edit Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {isEditing ? 'Edit Employee' : 'Add Employee'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              placeholderTextColor="#999"
-              value={form.name}
-              onChangeText={(t) => setForm({ ...form, name: t })}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Mobile Number"
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-              maxLength={10}
-              value={form.mobile_number}
-              onChangeText={(t) => setForm({ ...form, mobile_number: t.replace(/\D/g, '') })}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder={isEditing ? 'New Password (leave blank to keep)' : 'Password'}
-              placeholderTextColor="#999"
-              secureTextEntry
-              value={form.password}
-              onChangeText={(t) => setForm({ ...form, password: t })}
-            />
-            <TouchableOpacity
-              style={styles.submitBtn}
-              onPress={isEditing ? handleUpdate : handleCreate}
-            >
-              <Text style={styles.submitBtnText}>
-                {isEditing ? 'Update' : 'Create'}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>
+                {isEditing ? 'Edit Employee' : 'Add Employee'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                placeholderTextColor="#999"
+                value={form.name}
+                onChangeText={(t) => setForm({ ...form, name: t })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Mobile Number"
+                placeholderTextColor="#999"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={form.mobile_number}
+                onChangeText={(t) => setForm({ ...form, mobile_number: t.replace(/\D/g, '') })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={isEditing ? 'New Password (leave blank to keep)' : 'Password'}
+                placeholderTextColor="#999"
+                secureTextEntry
+                value={form.password}
+                onChangeText={(t) => setForm({ ...form, password: t })}
+              />
+
+              {!isEditing && (
+                <>
+                  <Text style={styles.sectionLabel}>Assign Projects</Text>
+                  {projects.length ? projects.map((proj) => {
+                    const selected = selectedProjectIds.includes(proj.id);
+                    return (
+                      <TouchableOpacity
+                        key={proj.id}
+                        style={[styles.projectChip, selected && styles.projectChipSelected]}
+                        onPress={() => toggleProjectSelection(proj.id)}
+                      >
+                        <Text style={[styles.projectChipText, selected && styles.projectChipTextSelected]}>
+                          {selected ? '✓ ' : ''}{proj.project_number} — {proj.project_name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }) : (
+                    <Text style={styles.helperText}>No projects yet — create one below</Text>
+                  )}
+
+                  <Text style={styles.sectionLabel}>Or Create New Project</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Project Code (e.g. PRJ-004)"
+                    placeholderTextColor="#999"
+                    value={newProject.project_number}
+                    onChangeText={(t) => setNewProject({ ...newProject, project_number: t })}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Project Name (e.g. Site Office Building)"
+                    placeholderTextColor="#999"
+                    value={newProject.project_name}
+                    onChangeText={(t) => setNewProject({ ...newProject, project_name: t })}
+                  />
+                  <Text style={styles.helperText}>
+                    New project will be created and assigned to this employee
+                  </Text>
+                </>
+              )}
+
+              {isEditing && (
+                <Text style={styles.helperText}>
+                  To change project assignments, use the Projects button on the employee card
+                </Text>
+              )}
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={isEditing ? handleUpdate : handleCreate}
+                disabled={saving}
+              >
+                {saving
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.submitBtnText}>{isEditing ? 'Update' : 'Create'}</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => { setModalVisible(false); resetFormState(); }}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* Assign Projects Modal */}
       <Modal visible={assignModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              Projects Assigned to {selectedEmployee?.name}
+              Projects — {selectedEmployee?.name}
             </Text>
             {loadingAssignedProjects ? (
               <ActivityIndicator size="small" color="#1a237e" />
             ) : (
-              <ScrollView style={{ maxHeight: 300 }}>
+              <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+                <Text style={styles.sectionLabel}>Assigned Projects</Text>
                 {assignedProjects.length ? assignedProjects.map((proj) => (
                   <View key={proj.id} style={styles.projectRow}>
                     <Text style={styles.projectText}>
                       {proj.project_number} — {proj.project_name}
                     </Text>
-                    <View style={styles.projectBtns}>
-                      <TouchableOpacity
-                        style={styles.removeSmallBtn}
-                        onPress={() => handleRemoveProject(proj)}
-                      >
-                        <Text style={styles.removeSmallText}>Remove</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      style={styles.removeSmallBtn}
+                      onPress={() => handleRemoveProject(proj)}
+                    >
+                      <Text style={styles.removeSmallText}>Remove</Text>
+                    </TouchableOpacity>
                   </View>
                 )) : (
-                  <Text style={styles.emptyText}>No projects assigned to this employee</Text>
+                  <Text style={styles.helperText}>No projects assigned yet</Text>
+                )}
+
+                <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Assign Project</Text>
+                {unassignedProjects.length ? unassignedProjects.map((proj) => (
+                  <View key={proj.id} style={styles.projectRow}>
+                    <Text style={styles.projectText}>
+                      {proj.project_number} — {proj.project_name}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.assignSmallBtn}
+                      onPress={() => handleAssignProject(proj)}
+                    >
+                      <Text style={styles.assignSmallText}>Assign</Text>
+                    </TouchableOpacity>
+                  </View>
+                )) : (
+                  <Text style={styles.helperText}>All projects are already assigned</Text>
                 )}
               </ScrollView>
             )}
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={closeProjectsModal}
-            >
+            <TouchableOpacity style={styles.cancelBtn} onPress={closeProjectsModal}>
               <Text style={styles.cancelBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -390,18 +546,29 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#fff', borderRadius: 16,
-    padding: 24, width: '100%'
+    padding: 24, width: '100%', maxHeight: '90%'
   },
   modalTitle: {
     fontSize: 18, fontWeight: 'bold', color: '#1a237e', marginBottom: 16
   },
+  sectionLabel: {
+    fontSize: 13, fontWeight: '700', color: '#1a237e', marginBottom: 8, marginTop: 4,
+  },
+  helperText: { fontSize: 12, color: '#888', marginBottom: 12 },
   input: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     padding: 12, fontSize: 14, marginBottom: 12, color: '#333'
   },
+  projectChip: {
+    borderWidth: 1, borderColor: '#c5cae9', borderRadius: 10,
+    padding: 10, marginBottom: 8, backgroundColor: '#fff',
+  },
+  projectChipSelected: { backgroundColor: '#1a237e', borderColor: '#1a237e' },
+  projectChipText: { fontSize: 13, color: '#1a237e' },
+  projectChipTextSelected: { color: '#fff', fontWeight: '600' },
   submitBtn: {
     backgroundColor: '#1a237e', padding: 14,
-    borderRadius: 10, alignItems: 'center', marginBottom: 8
+    borderRadius: 10, alignItems: 'center', marginBottom: 8, marginTop: 4,
   },
   submitBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
   cancelBtn: {
@@ -414,11 +581,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', paddingVertical: 10,
     borderBottomWidth: 0.5, borderBottomColor: '#eee'
   },
-  projectText: { fontSize: 13, color: '#333', flex: 1 },
-  projectBtns: { flexDirection: 'row', gap: 6 },
+  projectText: { fontSize: 13, color: '#333', flex: 1, marginRight: 8 },
+  assignSmallBtn: {
+    backgroundColor: '#e8f5e9', padding: 6, borderRadius: 6
+  },
+  assignSmallText: { color: '#2e7d32', fontSize: 11, fontWeight: 'bold' },
   removeSmallBtn: {
-    backgroundColor: '#ffebee', padding: 6,
-    borderRadius: 6
+    backgroundColor: '#ffebee', padding: 6, borderRadius: 6
   },
   removeSmallText: { color: '#c62828', fontSize: 11, fontWeight: 'bold' },
 });

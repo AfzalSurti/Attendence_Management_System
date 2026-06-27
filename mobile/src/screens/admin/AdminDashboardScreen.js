@@ -85,12 +85,24 @@ export default function AdminDashboardScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.menuItem}
-        onPress={() => navigation.navigate('AdminProjects')}
+        onPress={() => navigation.navigate('ManageEmployees')}
+      >
+        <Text style={styles.menuIcon}>👥</Text>
+        <View>
+          <Text style={styles.menuTitle}>Manage Employees</Text>
+          <Text style={styles.menuSub}>Create, edit, assign projects to employees</Text>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => navigation.navigate('ManageProjects')}
       >
         <Text style={styles.menuIcon}>📁</Text>
         <View>
-          <Text style={styles.menuTitle}>View Projects</Text>
-          <Text style={styles.menuSub}>See projects and assigned employees</Text>
+          <Text style={styles.menuTitle}>Manage Projects</Text>
+          <Text style={styles.menuSub}>Create, edit and delete projects</Text>
         </View>
         <Text style={styles.arrow}>›</Text>
       </TouchableOpacity>
