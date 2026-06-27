@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateField from '../../components/DateField';
 import { getHolidaysAPI, addHolidayAPI, deleteHolidayAPI } from '../../services/api';
 
 export default function HolidayScreen({ navigation }) {
@@ -11,7 +11,6 @@ export default function HolidayScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState({ holiday_date: '', holiday_name: '' });
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => { loadHolidays(); }, []);
 
@@ -125,30 +124,16 @@ export default function HolidayScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Add Holiday</Text>
-            <TouchableOpacity
+            <DateField
+              value={form.holiday_date}
+              onChange={(date) => setForm((prev) => ({ ...prev, holiday_date: date }))}
+              placeholder="Select Holiday Date"
               style={styles.dateField}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={form.holiday_date ? styles.dateText : styles.datePlaceholder}>
-                {form.holiday_date || 'Select Holiday Date'}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                mode="date"
-                display="default"
-                value={new Date(form.holiday_date || new Date().toISOString())}
-                onChange={(_, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (!selectedDate) return;
-                  const iso = selectedDate.toISOString().slice(0, 10);
-                  setForm((prev) => ({ ...prev, holiday_date: iso }));
-                }}
-              />
-            )}
+            />
             <TextInput
               style={styles.input}
               placeholder="Holiday Name (e.g. Diwali)"
+              placeholderTextColor="#999"
               value={form.holiday_name}
               onChangeText={(t) => setForm({ ...form, holiday_name: t })}
             />

@@ -4,8 +4,10 @@ import {
   StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
   ScrollView, Keyboard
 } from 'react-native';
+import { isWeb } from '../../utils/platform';
 import { loginAPI } from '../../services/api';
-import { saveToken, saveUser } from '../../utils/storage';
+import { saveToken, saveUser, clearStorage } from '../../utils/storage';
+import { isEmployeeWebBlocked } from '../../utils/platform';
 import GeoLoader from '../../components/GeoLoader';
 
 const getLoginErrorMessage = (err) => {
@@ -60,6 +62,15 @@ export default function LoginScreen({ navigation }) {
       await saveToken(access_token);
       await saveUser({ role, employee_id, name });
 
+      if (isEmployeeWebBlocked(role)) {
+        await clearStorage();
+        Alert.alert(
+          'Mobile App Only',
+          'Employee attendance is available on the Android app only. Please install the APK on your phone.'
+        );
+        return;
+      }
+
       // Redirect based on role
       if (role === 'admin') {
         navigation.replace('AdminDashboard');
@@ -94,7 +105,14 @@ export default function LoginScreen({ navigation }) {
       <View style={styles.card}>
         <Text style={styles.title}>Attendance System</Text>
         <Text style={styles.subtitle}>Geo Designs & Research</Text>
-        <Text style={styles.loginHint}>Login to continue</Text>
+        <Text style={styles.loginHint}>
+          {isWeb ? 'Admin & Developer web portal' : 'Login to continue'}
+        </Text>
+        {isWeb && (
+          <Text style={styles.webNote}>
+            Employees: please use the mobile Android app for attendance
+          </Text>
+        )}
 
         <TextInput
           style={styles.input}
@@ -181,8 +199,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 8,
     marginTop: 4,
+  },
+  webNote: {
+    fontSize: 12,
+    color: '#5c6bc0',
+    textAlign: 'center',
+    marginBottom: 20,
+    backgroundColor: '#e8eaf6',
+    padding: 10,
+    borderRadius: 8,
   },
   input: {
     borderWidth: 1,

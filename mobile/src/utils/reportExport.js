@@ -2,6 +2,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { formatCoords } from './coordinates';
+import { isWeb } from './platform';
 
 const formatDate = (date) => {
   if (!date) return '--';
@@ -202,6 +203,27 @@ const buildBulkAttendanceHtml = (title, records, filterLabel) => {
   `;
 };
 
+const downloadOnWeb = (content, filename, mimeType) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const printHtmlOnWeb = (html) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    throw new Error('Pop-up blocked. Allow pop-ups to download PDF.');
+  }
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+};
+
 const shareFile = async (uri, mimeType) => {
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
@@ -213,6 +235,10 @@ const shareFile = async (uri, mimeType) => {
 export const exportAttendanceExcel = async (employeeName, records, rangeLabel) => {
   const csv = buildAttendanceCsv(employeeName, records, rangeLabel);
   const safeName = employeeName.replace(/[^a-zA-Z0-9]/g, '_');
+  if (isWeb) {
+    downloadOnWeb(csv, `attendance_${safeName}_${Date.now()}.csv`, 'text/csv;charset=utf-8');
+    return;
+  }
   const path = `${FileSystem.cacheDirectory}attendance_${safeName}_${Date.now()}.csv`;
   await FileSystem.writeAsStringAsync(path, csv, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -222,12 +248,20 @@ export const exportAttendanceExcel = async (employeeName, records, rangeLabel) =
 
 export const exportAttendancePdf = async (employeeName, records, rangeLabel) => {
   const html = buildAttendanceHtml(employeeName, records, rangeLabel);
+  if (isWeb) {
+    printHtmlOnWeb(html);
+    return;
+  }
   const { uri } = await Print.printToFileAsync({ html });
   await shareFile(uri, 'application/pdf');
 };
 
 export const exportBulkAttendanceExcel = async (title, records, filterLabel) => {
   const csv = buildBulkAttendanceCsv(title, records, filterLabel);
+  if (isWeb) {
+    downloadOnWeb(csv, `attendance_bulk_${Date.now()}.csv`, 'text/csv;charset=utf-8');
+    return;
+  }
   const path = `${FileSystem.cacheDirectory}attendance_bulk_${Date.now()}.csv`;
   await FileSystem.writeAsStringAsync(path, csv, {
     encoding: FileSystem.EncodingType.UTF8,
@@ -237,6 +271,10 @@ export const exportBulkAttendanceExcel = async (title, records, filterLabel) => 
 
 export const exportBulkAttendancePdf = async (title, records, filterLabel) => {
   const html = buildBulkAttendanceHtml(title, records, filterLabel);
+  if (isWeb) {
+    printHtmlOnWeb(html);
+    return;
+  }
   const { uri } = await Print.printToFileAsync({ html });
   await shareFile(uri, 'application/pdf');
 };

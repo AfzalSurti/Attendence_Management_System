@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { getUser } from '../utils/storage';
+import { getUser, clearStorage } from '../utils/storage';
 import { wakeServer } from '../utils/wakeServer';
+import { isEmployeeWebBlocked } from '../utils/platform';
 import GeoLoader from '../components/GeoLoader';
+import WebShell from '../components/WebShell';
 
 // Auth
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -33,6 +35,10 @@ const Stack = createNativeStackNavigator();
 const resolveInitialRoute = async () => {
   const user = await getUser();
   if (!user) return 'Login';
+  if (isEmployeeWebBlocked(user.role)) {
+    await clearStorage();
+    return 'Login';
+  }
   if (user.role === 'admin') return 'AdminDashboard';
   if (user.role === 'developer') return 'DevDashboard';
   return 'Dashboard';
@@ -74,34 +80,36 @@ export default function AppNavigator() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={initialRoute}
-        screenOptions={{ headerShown: false }}
-      >
-        {/* Auth */}
-        <Stack.Screen name="Login" component={LoginScreen} />
+      <WebShell>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName={initialRoute}
+            screenOptions={{ headerShown: false }}
+          >
+            {/* Auth */}
+            <Stack.Screen name="Login" component={LoginScreen} />
 
-        {/* Employee */}
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="Attendance" component={AttendanceScreen} />
-        <Stack.Screen name="History" component={HistoryScreen} />
+            {/* Employee — mobile only */}
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="Attendance" component={AttendanceScreen} />
+            <Stack.Screen name="History" component={HistoryScreen} />
 
-        {/* Developer */}
-        <Stack.Screen name="DevDashboard" component={DevDashboardScreen} />
-        <Stack.Screen name="ManageEmployees" component={ManageEmployeesScreen} />
-        <Stack.Screen name="ManageProjects" component={ManageProjectsScreen} />
-        <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
-        <Stack.Screen name="EmployeeAttendance" component={EmployeeAttendanceScreen} />
+            {/* Developer */}
+            <Stack.Screen name="DevDashboard" component={DevDashboardScreen} />
+            <Stack.Screen name="ManageEmployees" component={ManageEmployeesScreen} />
+            <Stack.Screen name="ManageProjects" component={ManageProjectsScreen} />
+            <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
+            <Stack.Screen name="EmployeeAttendance" component={EmployeeAttendanceScreen} />
 
-        {/* Admin */}
-        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-        <Stack.Screen name="AttendanceReport" component={AttendanceReportScreen} />
-        <Stack.Screen name="AdminEmployeeReport" component={AdminEmployeeReportScreen} />
-        <Stack.Screen name="AdminProjects" component={AdminProjectsScreen} />
-        <Stack.Screen name="Holidays" component={HolidayScreen} />
-      </Stack.Navigator>
-      </NavigationContainer>
+            {/* Admin */}
+            <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+            <Stack.Screen name="AttendanceReport" component={AttendanceReportScreen} />
+            <Stack.Screen name="AdminEmployeeReport" component={AdminEmployeeReportScreen} />
+            <Stack.Screen name="AdminProjects" component={AdminProjectsScreen} />
+            <Stack.Screen name="Holidays" component={HolidayScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </WebShell>
     </SafeAreaProvider>
   );
 }

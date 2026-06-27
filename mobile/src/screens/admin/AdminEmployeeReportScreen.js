@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, Alert, ScrollView, Modal,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateField from '../../components/DateField';
 import { getAdminAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCoords } from '../../utils/coordinates';
@@ -36,7 +36,6 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [draftFrom, setDraftFrom] = useState('');
   const [draftTo, setDraftTo] = useState('');
-  const [datePickerTarget, setDatePickerTarget] = useState(null);
 
   const getRangeLabel = useCallback(() => {
     if (activePreset === 'custom') {
@@ -242,39 +241,18 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.customTitle}>Custom Date Range</Text>
-            <TouchableOpacity
+            <DateField
+              value={draftFrom}
+              onChange={setDraftFrom}
+              placeholder="Select From Date"
               style={styles.dateField}
-              onPress={() => setDatePickerTarget('from')}
-            >
-              <Text style={draftFrom ? styles.dateFieldValue : styles.dateFieldPlaceholder}>
-                {draftFrom || 'Select From Date'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            />
+            <DateField
+              value={draftTo}
+              onChange={setDraftTo}
+              placeholder="Select To Date"
               style={styles.dateField}
-              onPress={() => setDatePickerTarget('to')}
-            >
-              <Text style={draftTo ? styles.dateFieldValue : styles.dateFieldPlaceholder}>
-                {draftTo || 'Select To Date'}
-              </Text>
-            </TouchableOpacity>
-
-            {datePickerTarget && (
-              <DateTimePicker
-                mode="date"
-                display="default"
-                value={new Date(
-                  (datePickerTarget === 'from' ? draftFrom : draftTo) || new Date().toISOString()
-                )}
-                onChange={(_, selectedDate) => {
-                  setDatePickerTarget(null);
-                  if (!selectedDate) return;
-                  const iso = selectedDate.toISOString().slice(0, 10);
-                  if (datePickerTarget === 'from') setDraftFrom(iso);
-                  else setDraftTo(iso);
-                }}
-              />
-            )}
+            />
 
             <TouchableOpacity style={styles.applyBtn} onPress={applyCustomModalRange}>
               <Text style={styles.applyBtnText}>Apply Custom Range</Text>
