@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.employee import Employee, RoleEnum
-from app.schemas.employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse
+from app.schemas.employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse, BulkImportResponse
 from app.utils.auth import hash_password, decode_access_token
+from app.services.bulk_import import parse_upload_file, import_employee_rows
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
 
@@ -57,6 +58,31 @@ def get_all_employees(
     current_user: Employee = Depends(require_developer)
 ):
     return db.query(Employee).filter(Employee.role == RoleEnum.employee).all()
+
+# Bulk import employees + projects from CSV/Excel (web admin portal)
+@router.post("/bulk-import", response_model=BulkImportResponse)
+async def bulk_import_employees(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(require_developer),
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    try:
+        rows = parse_upload_file(file.filename, content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not rows:
+        raise HTTPException(status_code=400, detail="No data rows found in file")
+
+    result = import_employee_rows(db, rows)
+    return result
 
 # Get single employee
 @router.get("/{employee_id}", response_model=EmployeeResponse)

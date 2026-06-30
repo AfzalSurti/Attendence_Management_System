@@ -51,6 +51,11 @@ export const getAllEmployeesAPI = () => api.get('/employees/');
 export const createEmployeeAPI = (data) => api.post('/employees/', data);
 export const updateEmployeeAPI = (id, data) => api.put(`/employees/${id}`, data);
 export const deleteEmployeeAPI = (id) => api.delete(`/employees/${id}`);
+export const bulkImportEmployeesAPI = (formData) =>
+  api.post('/employees/bulk-import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  });
 export const getAllProjectsAPI = () => api.get('/projects/');
 export const getProjectDetailsAPI = (id) => api.get(`/projects/${id}`);
 export const createProjectAPI = (data) => api.post('/projects/', data);

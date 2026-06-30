@@ -37,3 +37,11 @@ class TokenResponse(BaseModel):
     role: str
     employee_id: int
     name: str
+
+class BulkImportResponse(BaseModel):
+    projects_created: int
+    employees_created: int
+    assignments_created: int
+    rows_processed: int
+    rows_skipped: int
+    errors: list[str]

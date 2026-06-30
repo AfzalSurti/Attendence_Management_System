@@ -9,6 +9,7 @@ import {
   getAllProjectsAPI, getProjectDetailsAPI,
   createProjectAPI, assignProjectAPI, removeAssignmentAPI
 } from '../../services/api';
+import EmployeeBulkUpload from '../../components/EmployeeBulkUpload';
 
 const emptyNewProject = () => ({ project_number: '', project_name: '' });
 
@@ -335,6 +336,8 @@ export default function ManageEmployeesScreen({ navigation }) {
       <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
         <Text style={styles.addBtnText}>+ Add Employee</Text>
       </TouchableOpacity>
+
+      <EmployeeBulkUpload onComplete={loadData} />
 
       <FlatList
         data={employees}
