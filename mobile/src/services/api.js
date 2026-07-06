@@ -69,6 +69,7 @@ export const removeAssignmentAPI = (employeeId, projectId) =>
 export const getAdminAttendanceAPI = (params) => api.get('/admin/attendance', { params });
 export const get30DayReportAPI = () => api.get('/admin/attendance/30days');
 export const getOverviewAPI = () => api.get('/admin/overview');
+export const getTodayAttendanceSummaryAPI = () => api.get('/admin/today-attendance');
 export const getHolidaysAPI = () => api.get('/admin/holidays');
 export const addHolidayAPI = (data) => api.post('/admin/holidays', data);
 export const deleteHolidayAPI = (id) => api.delete(`/admin/holidays/${id}`);

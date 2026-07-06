@@ -157,14 +157,67 @@ def get_overview(
 ):
     total_employees = db.query(Employee).filter(Employee.role == RoleEnum.employee).count()
     total_projects = db.query(Project).count()
-    today_attendance = db.query(Attendance).filter(
-        Attendance.date == date.today()
-    ).count()
+    today = date.today()
+    today_attendance = db.query(Attendance).filter(Attendance.date == today).count()
+    present_count = today_attendance
+    absent_count = max(total_employees - present_count, 0)
 
     return {
         "total_employees": total_employees,
         "total_projects": total_projects,
-        "today_attendance": today_attendance
+        "today_attendance": today_attendance,
+        "present_count": present_count,
+        "absent_count": absent_count,
+    }
+
+@router.get("/today-attendance")
+def get_today_attendance(
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(require_admin)
+):
+    today = date.today()
+    employees = (
+        db.query(Employee)
+        .filter(Employee.role == RoleEnum.employee)
+        .order_by(Employee.name)
+        .all()
+    )
+    records = db.query(Attendance).filter(Attendance.date == today).all()
+    record_by_employee = {record.employee_id: record for record in records}
+
+    present = []
+    absent = []
+
+    for employee in employees:
+        record = record_by_employee.get(employee.id)
+        if record:
+            project = db.query(Project).filter(Project.id == record.project_id).first()
+            present.append({
+                "employee_id": employee.id,
+                "name": employee.name,
+                "mobile_number": employee.mobile_number,
+                "project_code": project.project_number if project else None,
+                "project_name": project.project_name if project else None,
+                "checkin_time": record.checkin_time,
+                "checkout_time": record.checkout_time,
+                "working_hours": record.working_hours,
+            })
+        else:
+            absent.append({
+                "employee_id": employee.id,
+                "name": employee.name,
+                "mobile_number": employee.mobile_number,
+            })
+
+    total = len(employees)
+    present_count = len(present)
+    return {
+        "date": today,
+        "total_employees": total,
+        "present_count": present_count,
+        "absent_count": total - present_count,
+        "present": present,
+        "absent": absent,
     }
 
 @router.put("/attendance/{attendance_id}")

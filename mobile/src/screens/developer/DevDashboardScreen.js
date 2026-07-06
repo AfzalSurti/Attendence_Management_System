@@ -4,12 +4,14 @@ import {
   ScrollView, ActivityIndicator
 } from 'react-native';
 import { getUser, clearStorage } from '../../utils/storage';
-import { getAllEmployeesAPI, getAllProjectsAPI } from '../../services/api';
+import { getAllEmployeesAPI, getAllProjectsAPI, getTodayAttendanceSummaryAPI } from '../../services/api';
+import TodayAttendanceSummary from '../../components/TodayAttendanceSummary';
 
 export default function DevDashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [employeeCount, setEmployeeCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
+  const [todaySummary, setTodaySummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,12 +22,14 @@ export default function DevDashboardScreen({ navigation }) {
     const u = await getUser();
     setUser(u);
     try {
-      const [empRes, projRes] = await Promise.all([
+      const [empRes, projRes, todayRes] = await Promise.all([
         getAllEmployeesAPI(),
-        getAllProjectsAPI()
+        getAllProjectsAPI(),
+        getTodayAttendanceSummaryAPI(),
       ]);
       setEmployeeCount(empRes.data.length);
       setProjectCount(projRes.data.length);
+      setTodaySummary(todayRes.data);
     } catch (err) {
       console.log(err);
     } finally {
@@ -68,6 +72,12 @@ export default function DevDashboardScreen({ navigation }) {
           <Text style={styles.statLabel}>Projects</Text>
         </View>
       </View>
+
+      <TodayAttendanceSummary
+        summary={todaySummary}
+        onPressPresent={() => navigation.navigate('TodayAttendance', { type: 'present' })}
+        onPressAbsent={() => navigation.navigate('TodayAttendance', { type: 'absent' })}
+      />
 
       {/* Actions */}
       <Text style={styles.sectionTitle}>Manage</Text>

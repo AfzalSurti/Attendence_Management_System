@@ -4,11 +4,13 @@ import {
   ScrollView, ActivityIndicator
 } from 'react-native';
 import { getUser, clearStorage } from '../../utils/storage';
-import { getOverviewAPI } from '../../services/api';
+import { getOverviewAPI, getTodayAttendanceSummaryAPI } from '../../services/api';
+import TodayAttendanceSummary from '../../components/TodayAttendanceSummary';
 
 export default function AdminDashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [overview, setOverview] = useState(null);
+  const [todaySummary, setTodaySummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,8 +21,12 @@ export default function AdminDashboardScreen({ navigation }) {
     const u = await getUser();
     setUser(u);
     try {
-      const res = await getOverviewAPI();
-      setOverview(res.data);
+      const [overviewRes, todayRes] = await Promise.all([
+        getOverviewAPI(),
+        getTodayAttendanceSummaryAPI(),
+      ]);
+      setOverview(overviewRes.data);
+      setTodaySummary(todayRes.data);
     } catch (err) {
       console.log(err);
     } finally {
@@ -64,9 +70,15 @@ export default function AdminDashboardScreen({ navigation }) {
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{overview?.today_attendance || 0}</Text>
-          <Text style={styles.statLabel}>Today</Text>
+          <Text style={styles.statLabel}>Checked In</Text>
         </View>
       </View>
+
+      <TodayAttendanceSummary
+        summary={todaySummary}
+        onPressPresent={() => navigation.navigate('TodayAttendance', { type: 'present' })}
+        onPressAbsent={() => navigation.navigate('TodayAttendance', { type: 'absent' })}
+      />
 
       {/* Menu */}
       <Text style={styles.sectionTitle}>Reports & Management</Text>

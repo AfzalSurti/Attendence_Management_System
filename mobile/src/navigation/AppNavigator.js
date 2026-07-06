@@ -29,6 +29,7 @@ import AttendanceReportScreen from '../screens/admin/AttendanceReportScreen';
 import AdminEmployeeReportScreen from '../screens/admin/AdminEmployeeReportScreen';
 import AdminProjectsScreen from '../screens/admin/AdminProjectsScreen';
 import HolidayScreen from '../screens/admin/HolidayScreen';
+import TodayAttendanceScreen from '../screens/shared/TodayAttendanceScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -100,6 +101,7 @@ export default function AppNavigator() {
             <Stack.Screen name="ManageProjects" component={ManageProjectsScreen} />
             <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
             <Stack.Screen name="EmployeeAttendance" component={EmployeeAttendanceScreen} />
+            <Stack.Screen name="TodayAttendance" component={TodayAttendanceScreen} />
 
             {/* Admin */}
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
