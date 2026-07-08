@@ -3,12 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { getTodayAttendanceSummaryAPI } from '../../services/api';
-
-const formatTime = (iso) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-};
+import { formatDisplayDate, formatDisplayTime, formatHours } from '../../utils/display';
 
 export default function TodayAttendanceScreen({ navigation, route }) {
   const listType = route.params?.type || 'present';
@@ -46,13 +41,13 @@ export default function TodayAttendanceScreen({ navigation, route }) {
         {item.project_code} — {item.project_name}
       </Text>
       <View style={styles.row}>
-        <Text style={styles.badgeGreen}>In: {formatTime(item.checkin_time)}</Text>
+        <Text style={styles.badgeGreen}>In: {formatDisplayTime(item.checkin_time)}</Text>
         <Text style={item.checkout_time ? styles.badgeBlue : styles.badgeGray}>
-          Out: {formatTime(item.checkout_time)}
+          Out: {formatDisplayTime(item.checkout_time)}
         </Text>
       </View>
       {item.working_hours != null && (
-        <Text style={styles.hours}>{item.working_hours.toFixed(1)} hrs</Text>
+        <Text style={styles.hours}>{formatHours(item.working_hours)}</Text>
       )}
     </View>
   );
@@ -80,7 +75,9 @@ export default function TodayAttendanceScreen({ navigation, route }) {
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.date}>{date} · {employees.length} employee{employees.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.date}>
+          {formatDisplayDate(date)} · {employees.length} employee{employees.length !== 1 ? 's' : ''}
+        </Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 

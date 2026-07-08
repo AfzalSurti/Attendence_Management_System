@@ -7,23 +7,10 @@ import DateField from '../../components/DateField';
 import { getAdminAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCoords } from '../../utils/coordinates';
+import { formatDisplayDate, formatDisplayTime, formatHours } from '../../utils/display';
 import AttendanceSelfies from '../../components/AttendanceSelfies';
 import { getDateRange, PRESET_LABELS } from '../../utils/dateRanges';
 import { exportAttendanceExcel, exportAttendancePdf } from '../../utils/reportExport';
-
-const formatTime = (datetime) => {
-  if (!datetime) return '--';
-  return new Date(datetime).toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit',
-  });
-};
-
-const formatDate = (date) => {
-  if (!date) return '--';
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-};
 
 export default function AdminEmployeeReportScreen({ navigation, route }) {
   const employee = route.params?.employee;
@@ -126,36 +113,37 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
   const renderRecord = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.date}>{formatDate(item.date)}</Text>
-        <Text style={styles.hours}>
-          {item.working_hours != null ? `${item.working_hours}h` : '--'}
-        </Text>
+        <View>
+          <Text style={styles.date}>{formatDisplayDate(item.date)}</Text>
+          <Text style={styles.projectText}>
+            {item.project_code} — {item.project_name}
+          </Text>
+        </View>
+        <Text style={styles.hours}>{formatHours(item.working_hours)}</Text>
       </View>
-      <Text style={styles.projectText}>
-        {item.project_code} — {item.project_name}
-      </Text>
-      <View style={styles.timeRow}>
-        <View style={styles.timeBlock}>
+      <View style={styles.metaGrid}>
+        <View style={styles.metaCard}>
           <Text style={styles.timeLabel}>Check-in</Text>
-          <Text style={styles.timeValue}>{formatTime(item.checkin_time)}</Text>
+          <Text style={styles.timeValue}>{formatDisplayTime(item.checkin_time)}</Text>
+          <Text style={styles.coordsText}>
+            {formatCoords(item.checkin_latitude, item.checkin_longitude)}
+          </Text>
         </View>
-        <View style={styles.timeBlock}>
+        <View style={styles.metaCard}>
           <Text style={styles.timeLabel}>Check-out</Text>
-          <Text style={styles.timeValue}>{formatTime(item.checkout_time)}</Text>
+          <Text style={styles.timeValue}>{formatDisplayTime(item.checkout_time)}</Text>
+          <Text style={styles.coordsText}>
+            {formatCoords(item.checkout_latitude, item.checkout_longitude)}
+          </Text>
         </View>
       </View>
-      <View style={styles.coordsRow}>
-        <Text style={styles.coordsText}>
-          In: {formatCoords(item.checkin_latitude, item.checkin_longitude)}
-        </Text>
-        <Text style={styles.coordsText}>
-          Out: {formatCoords(item.checkout_latitude, item.checkout_longitude)}
-        </Text>
+      <View style={styles.selfieSection}>
+        <Text style={styles.sectionCaption}>Selfies</Text>
+        <AttendanceSelfies
+          checkinUrl={item.checkin_selfie_url}
+          checkoutUrl={item.checkout_selfie_url}
+        />
       </View>
-      <AttendanceSelfies
-        checkinUrl={item.checkin_selfie_url}
-        checkoutUrl={item.checkout_selfie_url}
-      />
     </View>
   );
 
@@ -338,19 +326,35 @@ const styles = StyleSheet.create({
   countText: { fontSize: 13, color: '#666', marginBottom: 10, textAlign: 'right' },
   card: {
     backgroundColor: '#fff', borderRadius: 16,
-    padding: 14, marginBottom: 10, elevation: 3,
+    padding: 16, marginBottom: 12, elevation: 3,
   },
   cardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4,
+    flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, gap: 12,
   },
   date: { fontSize: 15, fontWeight: 'bold', color: '#1a237e' },
-  hours: { fontSize: 13, fontWeight: 'bold', color: '#2e7d32' },
-  projectText: { fontSize: 12, color: '#666', marginBottom: 10 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 },
-  timeBlock: { alignItems: 'center' },
+  hours: {
+    fontSize: 12, fontWeight: '700', color: '#2e7d32',
+    backgroundColor: '#e8f5e9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+    alignSelf: 'flex-start',
+  },
+  projectText: { fontSize: 12, color: '#666', marginTop: 4 },
+  metaGrid: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  metaCard: {
+    flex: 1,
+    backgroundColor: '#f8faff',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
   timeLabel: { fontSize: 11, color: '#888' },
-  timeValue: { fontSize: 13, fontWeight: 'bold', color: '#333', marginTop: 2 },
-  coordsRow: { gap: 4 },
-  coordsText: { fontSize: 11, color: '#555' },
+  timeValue: { fontSize: 16, fontWeight: 'bold', color: '#333', marginTop: 4 },
+  coordsText: { fontSize: 11, color: '#555', marginTop: 6, lineHeight: 16 },
+  selfieSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#eef2ff',
+    paddingTop: 12,
+  },
+  sectionCaption: { fontSize: 12, color: '#667085', fontWeight: '700', marginBottom: 2 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 15 },
 });

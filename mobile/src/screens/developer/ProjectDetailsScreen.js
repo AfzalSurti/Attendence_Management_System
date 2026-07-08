@@ -72,10 +72,16 @@ export default function ProjectDetailsScreen({ navigation, route }) {
       </View>
 
       <View style={styles.infoCard}>
-        <Text style={styles.infoLabel}>Project Code</Text>
-        <Text style={styles.infoValue}>{details?.project_number}</Text>
-        <Text style={styles.infoLabel}>Project Name</Text>
-        <Text style={styles.infoValue}>{details?.project_name}</Text>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Project Code</Text>
+            <Text style={styles.infoValue}>{details?.project_number}</Text>
+          </View>
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Project Name</Text>
+            <Text style={styles.infoValue}>{details?.project_name}</Text>
+          </View>
+        </View>
         <View style={styles.countBox}>
           <Text style={styles.countNumber}>{details?.employee_count ?? 0}</Text>
           <Text style={styles.countLabel}>Employees Assigned</Text>
@@ -112,11 +118,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 16,
     padding: 20, marginBottom: 16, elevation: 3,
   },
+  infoGrid: { gap: 14 },
+  infoBlock: {
+    backgroundColor: '#f8faff',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
   infoLabel: { fontSize: 12, color: '#888', marginBottom: 4 },
-  infoValue: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 14 },
+  infoValue: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   countBox: {
     backgroundColor: '#e8eaf6', borderRadius: 12,
-    padding: 16, alignItems: 'center', marginTop: 4,
+    padding: 16, alignItems: 'center', marginTop: 14,
   },
   countNumber: { fontSize: 32, fontWeight: 'bold', color: '#1a237e' },
   countLabel: { fontSize: 13, color: '#5c6bc0', marginTop: 4 },
