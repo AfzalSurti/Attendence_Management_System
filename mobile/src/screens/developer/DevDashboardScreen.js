@@ -74,6 +74,10 @@ export default function DevDashboardScreen({ navigation }) {
             <Text style={styles.statNumber}>{projectCount}</Text>
             <Text style={styles.statLabel}>Projects</Text>
           </View>
+          <View style={[styles.statCard, styles.statCardAccent]}>
+            <Text style={styles.statNumber}>{todaySummary?.present_count ?? 0}</Text>
+            <Text style={styles.statLabel}>Checked In</Text>
+          </View>
         </View>
 
         <TodayAttendanceSummary
@@ -82,9 +86,21 @@ export default function DevDashboardScreen({ navigation }) {
           onPressAbsent={() => navigation.navigate('TodayAttendance', { type: 'absent' })}
         />
 
-        <Text style={styles.sectionTitle}>Manage</Text>
+        <Text style={styles.sectionTitle}>Reports & Management</Text>
 
         <View style={[styles.menuGrid, isWeb && styles.menuGridWeb]}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('AttendanceReport')}
+          >
+            <Text style={styles.menuIcon}>📊</Text>
+            <View style={styles.menuBody}>
+              <Text style={styles.menuTitle}>Attendance Reports</Text>
+              <Text style={styles.menuSub}>Filter, inspect, and export attendance records</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('ManageEmployees')}
@@ -105,6 +121,18 @@ export default function DevDashboardScreen({ navigation }) {
             <View style={styles.menuBody}>
               <Text style={styles.menuTitle}>Manage Projects</Text>
               <Text style={styles.menuSub}>Create, edit, delete projects</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Holidays')}
+          >
+            <Text style={styles.menuIcon}>🗓️</Text>
+            <View style={styles.menuBody}>
+              <Text style={styles.menuTitle}>Holiday Management</Text>
+              <Text style={styles.menuSub}>Add, review, and delete holiday dates</Text>
             </View>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
@@ -153,6 +181,7 @@ const styles = StyleSheet.create({
   },
   statCardPrimary: { backgroundColor: '#312e81' },
   statCardSecondary: { backgroundColor: '#4338ca' },
+  statCardAccent: { backgroundColor: '#1d4ed8' },
   statNumber: { fontSize: 34, fontWeight: '800', color: '#fff' },
   statLabel: { fontSize: 12, color: '#dbeafe', marginTop: 6, fontWeight: '600' },
   sectionTitle: {
