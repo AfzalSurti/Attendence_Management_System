@@ -5,13 +5,17 @@ import {
 } from 'react-native';
 import {
   getAllEmployeesAPI, getAllProjectsAPI,
-  getProjectDetailsAPI, getAdminAttendanceAPI,
+  getProjectDetailsAPI, getAdminAttendanceAPI, getAdminsAPI,
 } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { getDateRange, PRESET_LABELS } from '../../utils/dateRanges';
 import { exportBulkAttendanceExcel, exportBulkAttendancePdf } from '../../utils/reportExport';
+import { getUser } from '../../utils/storage';
 
 export default function AttendanceReportScreen({ navigation }) {
+  const [user, setUser] = useState(null);
+  const [admins, setAdmins] = useState([]);
+  const [selectedAdminId, setSelectedAdminId] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [projects, setProjects] = useState([]);
   const [assignments, setAssignments] = useState({});
@@ -22,14 +26,45 @@ export default function AttendanceReportScreen({ navigation }) {
   const [exportPreset, setExportPreset] = useState('all');
 
   useEffect(() => {
-    loadData();
+    bootstrap();
   }, []);
 
+  useEffect(() => {
+    if (user && (user.role !== 'developer' || selectedAdminId)) {
+      loadData();
+    }
+  }, [user, selectedAdminId]);
+
+  const bootstrap = async () => {
+    const currentUser = await getUser();
+    setUser(currentUser);
+    if (currentUser?.role === 'developer') {
+      try {
+        const res = await getAdminsAPI();
+        setAdmins(res.data);
+        if (res.data.length) {
+          setSelectedAdminId(res.data[0].id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        Alert.alert('Error', 'Failed to load admin accounts');
+        setLoading(false);
+      }
+      return;
+    }
+    loadData();
+  };
+
   const loadData = async () => {
+    setLoading(true);
     try {
+      const params = user?.role === 'developer' && selectedAdminId
+        ? { admin_id: selectedAdminId }
+        : undefined;
       const [empRes, projRes] = await Promise.all([
-        getAllEmployeesAPI(),
-        getAllProjectsAPI(),
+        getAllEmployeesAPI(params),
+        getAllProjectsAPI(params),
       ]);
       const staff = empRes.data.filter((e) => e.role === 'employee');
       const details = await Promise.all(
@@ -98,6 +133,7 @@ export default function AttendanceReportScreen({ navigation }) {
 
   const fetchFilteredRecords = async () => {
     const params = {};
+    if (user?.role === 'developer' && selectedAdminId) params.admin_id = selectedAdminId;
     if (selectedProjectId) params.project_id = selectedProjectId;
     if (exportPreset !== 'all') {
       const range = getDateRange(exportPreset);
@@ -183,6 +219,25 @@ export default function AttendanceReportScreen({ navigation }) {
         onChangeText={setSearch}
         clearButtonMode="while-editing"
       />
+
+      {user?.role === 'developer' && admins.length > 0 && (
+        <>
+          <Text style={styles.sectionLabel}>View Data For Admin</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.projectScroll}>
+            {admins.map((admin) => (
+              <TouchableOpacity
+                key={admin.id}
+                style={[styles.chip, selectedAdminId === admin.id && styles.chipActive]}
+                onPress={() => setSelectedAdminId(admin.id)}
+              >
+                <Text style={[styles.chipText, selectedAdminId === admin.id && styles.chipTextActive]}>
+                  {admin.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      )}
 
       <Text style={styles.sectionLabel}>Filter by Project</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.projectScroll}>

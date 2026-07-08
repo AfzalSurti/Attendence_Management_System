@@ -7,7 +7,7 @@ from app.models.employee import Employee, RoleEnum
 from app.models.project import Project
 from app.models.holiday import Holiday
 from app.schemas.holiday import HolidayCreate, HolidayResponse
-from app.routes.employee import get_current_user
+from app.routes.employee import get_current_user, require_manage_access
 from typing import List, Optional
 from datetime import date, timedelta
 
@@ -18,10 +18,37 @@ def require_admin(current_user: Employee = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access only")
     return current_user
 
+
+def get_scoped_employee_ids(
+    db: Session,
+    current_user: Employee,
+    admin_id: Optional[int] = None,
+):
+    query = db.query(Employee.id).filter(Employee.role == RoleEnum.employee)
+    if current_user.role == RoleEnum.admin:
+        query = query.filter(Employee.owner_admin_id == current_user.id)
+    elif admin_id:
+        query = query.filter(Employee.owner_admin_id == admin_id)
+    return [row[0] for row in query.all()]
+
+
+def get_scoped_project_ids(
+    db: Session,
+    current_user: Employee,
+    admin_id: Optional[int] = None,
+):
+    query = db.query(Project.id)
+    if current_user.role == RoleEnum.admin:
+        query = query.filter(Project.owner_admin_id == current_user.id)
+    elif admin_id:
+        query = query.filter(Project.owner_admin_id == admin_id)
+    return [row[0] for row in query.all()]
+
 # ── ATTENDANCE FILTERS ────────────────────────────────────────────────────────
 
 @router.get("/attendance")
 def get_all_attendance(
+    admin_id: Optional[int] = Query(None),
     employee_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
     date_from: Optional[date] = Query(None),
@@ -31,12 +58,16 @@ def get_all_attendance(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(require_admin)
 ):
-    query = db.query(Attendance)
+    scoped_employee_ids = get_scoped_employee_ids(db, current_user, admin_id)
+    scoped_project_ids = get_scoped_project_ids(db, current_user, admin_id)
+    query = db.query(Attendance).filter(Attendance.employee_id.in_(scoped_employee_ids or [-1]))
 
     if employee_id:
         query = query.filter(Attendance.employee_id == employee_id)
     if project_id:
         query = query.filter(Attendance.project_id == project_id)
+    elif scoped_project_ids:
+        query = query.filter(Attendance.project_id.in_(scoped_project_ids))
     if date_from:
         query = query.filter(Attendance.date >= date_from)
     if date_to:
@@ -75,11 +106,13 @@ def get_all_attendance(
 # 30 day report
 @router.get("/attendance/30days")
 def get_30_day_report(
+    admin_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: Employee = Depends(require_admin)
 ):
     date_from = date.today() - timedelta(days=30)
     records = db.query(Attendance).filter(
+        Attendance.employee_id.in_(get_scoped_employee_ids(db, current_user, admin_id) or [-1]),
         Attendance.date >= date_from
     ).order_by(Attendance.date.desc()).all()
 
@@ -110,7 +143,7 @@ def get_30_day_report(
 def add_holiday(
     data: HolidayCreate,
     db: Session = Depends(get_db),
-    current_user: Employee = Depends(require_admin)
+    current_user: Employee = Depends(require_manage_access)
 ):
     existing = db.query(Holiday).filter(
         Holiday.holiday_date == data.holiday_date
@@ -138,7 +171,7 @@ def get_holidays(
 def delete_holiday(
     holiday_id: int,
     db: Session = Depends(get_db),
-    current_user: Employee = Depends(require_admin)
+    current_user: Employee = Depends(require_manage_access)
 ):
     holiday = db.query(Holiday).filter(Holiday.id == holiday_id).first()
     if not holiday:
@@ -152,13 +185,19 @@ def delete_holiday(
 
 @router.get("/overview")
 def get_overview(
+    admin_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: Employee = Depends(require_admin)
 ):
-    total_employees = db.query(Employee).filter(Employee.role == RoleEnum.employee).count()
-    total_projects = db.query(Project).count()
+    employee_ids = get_scoped_employee_ids(db, current_user, admin_id)
+    project_ids = get_scoped_project_ids(db, current_user, admin_id)
+    total_employees = len(employee_ids)
+    total_projects = len(project_ids)
     today = date.today()
-    today_attendance = db.query(Attendance).filter(Attendance.date == today).count()
+    today_attendance = db.query(Attendance).filter(
+        Attendance.date == today,
+        Attendance.employee_id.in_(employee_ids or [-1]),
+    ).count()
     present_count = today_attendance
     absent_count = max(total_employees - present_count, 0)
 
@@ -172,6 +211,7 @@ def get_overview(
 
 @router.get("/today-attendance")
 def get_today_attendance(
+    admin_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: Employee = Depends(require_admin)
 ):
@@ -179,10 +219,14 @@ def get_today_attendance(
     employees = (
         db.query(Employee)
         .filter(Employee.role == RoleEnum.employee)
+        .filter(Employee.id.in_(get_scoped_employee_ids(db, current_user, admin_id) or [-1]))
         .order_by(Employee.name)
         .all()
     )
-    records = db.query(Attendance).filter(Attendance.date == today).all()
+    records = db.query(Attendance).filter(
+        Attendance.date == today,
+        Attendance.employee_id.in_([employee.id for employee in employees] or [-1]),
+    ).all()
     record_by_employee = {record.employee_id: record for record in records}
 
     present = []
@@ -225,11 +269,15 @@ def update_attendance(
     attendance_id: int,
     data: dict,
     db: Session = Depends(get_db),
-    current_user: Employee = Depends(require_admin)
+    current_user: Employee = Depends(require_manage_access)
 ):
     attendance = db.query(Attendance).filter(Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == RoleEnum.admin:
+        employee = db.query(Employee).filter(Employee.id == attendance.employee_id).first()
+        if not employee or employee.owner_admin_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied for this attendance record")
     if "checkin_time" in data:
         attendance.checkin_time = data["checkin_time"]
     if "checkout_time" in data:

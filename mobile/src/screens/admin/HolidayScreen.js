@@ -5,14 +5,25 @@ import {
 } from 'react-native';
 import DateField from '../../components/DateField';
 import { getHolidaysAPI, addHolidayAPI, deleteHolidayAPI } from '../../services/api';
+import { getUser } from '../../utils/storage';
 
 export default function HolidayScreen({ navigation }) {
+  const [user, setUser] = useState(null);
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState({ holiday_date: '', holiday_name: '' });
+  const isReadOnlyAdmin = user?.role === 'admin' && user?.admin_permission === 'read_only';
 
-  useEffect(() => { loadHolidays(); }, []);
+  useEffect(() => {
+    bootstrap();
+  }, []);
+
+  const bootstrap = async () => {
+    const currentUser = await getUser();
+    setUser(currentUser);
+    loadHolidays();
+  };
 
   const loadHolidays = async () => {
     try {
@@ -75,12 +86,14 @@ export default function HolidayScreen({ navigation }) {
         <Text style={styles.holidayName}>{item.holiday_name}</Text>
         <Text style={styles.holidayDate}>{formatDate(item.holiday_date)}</Text>
       </View>
-      <TouchableOpacity
-        style={styles.deleteBtn}
-        onPress={() => handleDelete(item)}
-      >
-        <Text style={styles.deleteBtnText}>Delete</Text>
-      </TouchableOpacity>
+      {!isReadOnlyAdmin && (
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => handleDelete(item)}
+        >
+          <Text style={styles.deleteBtnText}>Delete</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -100,13 +113,20 @@ export default function HolidayScreen({ navigation }) {
         <Text style={styles.title}>Holiday Management</Text>
       </View>
 
-      {/* Add Button */}
-      <TouchableOpacity
-        style={styles.addBtn}
-        onPress={() => setModalVisible(true)}
-      >
-        <Text style={styles.addBtnText}>+ Add Holiday</Text>
-      </TouchableOpacity>
+      {isReadOnlyAdmin && (
+        <Text style={styles.readOnlyNote}>
+          Read-only admin: holiday data can be viewed but not changed.
+        </Text>
+      )}
+
+      {!isReadOnlyAdmin && (
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={styles.addBtnText}>+ Add Holiday</Text>
+        </TouchableOpacity>
+      )}
 
       {/* List */}
       <FlatList
@@ -159,6 +179,15 @@ const styles = StyleSheet.create({
   header: { marginTop: 50, marginBottom: 16 },
   back: { color: '#1a237e', fontSize: 16, marginBottom: 8 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a237e' },
+  readOnlyNote: {
+    fontSize: 12,
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+    fontWeight: '600',
+  },
   addBtn: {
     backgroundColor: '#1a237e', padding: 14,
     borderRadius: 12, alignItems: 'center', marginBottom: 16

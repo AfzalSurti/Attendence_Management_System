@@ -12,6 +12,7 @@ class EmployeeCreate(BaseModel):
     mobile_number: str
     password: str
     role: RoleEnum = RoleEnum.employee
+    admin_id: Optional[int] = None
 
 class EmployeeUpdate(BaseModel):
     name: Optional[str] = None
@@ -23,6 +24,8 @@ class EmployeeResponse(BaseModel):
     name: str
     mobile_number: str
     role: RoleEnum
+    owner_admin_id: Optional[int] = None
+    admin_permission: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -37,6 +40,23 @@ class TokenResponse(BaseModel):
     role: str
     employee_id: int
     name: str
+    admin_permission: Optional[str] = None
+
+class AdminCreate(BaseModel):
+    name: str
+    mobile_number: str
+    password: str
+    admin_permission: str = "full"
+
+class AdminResponse(BaseModel):
+    id: int
+    name: str
+    mobile_number: str
+    role: RoleEnum
+    admin_permission: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class BulkImportResponse(BaseModel):
     projects_created: int

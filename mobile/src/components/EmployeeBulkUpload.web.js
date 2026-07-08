@@ -6,7 +6,7 @@ import { bulkImportEmployeesAPI } from '../services/api';
 
 const TEMPLATE_URL = '/employee_upload_template.csv';
 
-export default function EmployeeBulkUpload({ onComplete }) {
+export default function EmployeeBulkUpload({ onComplete, adminId, requiresAdminSelection }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
@@ -23,13 +23,17 @@ export default function EmployeeBulkUpload({ onComplete }) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    if (requiresAdminSelection && !adminId) {
+      Alert.alert('Select Admin', 'Choose an admin account before bulk upload.');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', file);
 
     setUploading(true);
     try {
-      const res = await bulkImportEmployeesAPI(formData);
+      const res = await bulkImportEmployeesAPI(formData, adminId);
       const {
         projects_created,
         employees_created,
@@ -64,6 +68,9 @@ export default function EmployeeBulkUpload({ onComplete }) {
         Columns: Project Name, Project Number, User Name, Mobile Number, Password.
         Existing projects and employees are reused; missing assignments are added.
       </Text>
+      {requiresAdminSelection && !adminId && (
+        <Text style={styles.warningText}>Select an admin first to upload employee data.</Text>
+      )}
 
       <View style={styles.row}>
         <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownloadTemplate}>
@@ -73,7 +80,7 @@ export default function EmployeeBulkUpload({ onComplete }) {
         <TouchableOpacity
           style={[styles.primaryBtn, uploading && styles.disabledBtn]}
           onPress={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || (requiresAdminSelection && !adminId)}
         >
           {uploading
             ? <ActivityIndicator color="#fff" size="small" />
@@ -103,6 +110,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 15, fontWeight: '700', color: '#1a237e', marginBottom: 6 },
   hint: { fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 18 },
+  warningText: { fontSize: 12, color: '#b45309', marginBottom: 12, fontWeight: '600' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   primaryBtn: {
     backgroundColor: '#2e7d32',

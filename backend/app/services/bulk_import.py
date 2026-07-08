@@ -104,7 +104,11 @@ def _parse_xlsx(content: bytes) -> list[dict[str, str]]:
     return parsed
 
 
-def import_employee_rows(db: Session, rows: list[dict[str, str]]) -> dict[str, Any]:
+def import_employee_rows(
+    db: Session,
+    rows: list[dict[str, str]],
+    owner_admin_id: int | None = None,
+) -> dict[str, Any]:
     projects_created = 0
     employees_created = 0
     assignments_created = 0
@@ -156,6 +160,7 @@ def import_employee_rows(db: Session, rows: list[dict[str, str]]) -> dict[str, A
                         project = Project(
                             project_number=project_number,
                             project_name=project_name,
+                            owner_admin_id=owner_admin_id,
                         )
                         db.add(project)
                         db.flush()
@@ -175,6 +180,7 @@ def import_employee_rows(db: Session, rows: list[dict[str, str]]) -> dict[str, A
                             mobile_number=mobile_number,
                             password_hash=hash_password(password),
                             role=RoleEnum.employee,
+                            owner_admin_id=owner_admin_id,
                         )
                         db.add(employee)
                         db.flush()

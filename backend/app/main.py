@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routes import auth, employee, project, attendance, admin
+from app.schema_sync import ensure_schema_updates
 
 # Create all tables in database
 Base.metadata.create_all(bind=engine)
+ensure_schema_updates(engine)
 
 app = FastAPI(title="Attendance Management System", version="1.0.0")
 

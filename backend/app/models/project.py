@@ -9,6 +9,7 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_number = Column(String, unique=True, nullable=False)
     project_name = Column(String, nullable=False)
+    owner_admin_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class EmployeeProject(Base):

@@ -56,11 +56,11 @@ export default function LoginScreen({ navigation }) {
         password: password,
       });
 
-      const { access_token, role, employee_id, name } = res.data;
+      const { access_token, role, employee_id, name, admin_permission } = res.data;
 
       // Save token and user info
       await saveToken(access_token);
-      await saveUser({ role, employee_id, name });
+      await saveUser({ role, employee_id, name, admin_permission });
 
       if (isEmployeeWebBlocked(role)) {
         await clearStorage();

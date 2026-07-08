@@ -47,16 +47,19 @@ export const checkInAPI = (data) => api.post('/attendance/checkin', data);
 export const checkOutAPI = (data) => api.post('/attendance/checkout', data);
 
 // Developer
-export const getAllEmployeesAPI = () => api.get('/employees/');
+export const getAllEmployeesAPI = (params) => api.get('/employees/', { params });
 export const createEmployeeAPI = (data) => api.post('/employees/', data);
 export const updateEmployeeAPI = (id, data) => api.put(`/employees/${id}`, data);
 export const deleteEmployeeAPI = (id) => api.delete(`/employees/${id}`);
-export const bulkImportEmployeesAPI = (formData) =>
+export const getAdminsAPI = () => api.get('/employees/admins');
+export const createAdminAPI = (data) => api.post('/employees/admins', data);
+export const bulkImportEmployeesAPI = (formData, adminId) =>
   api.post('/employees/bulk-import', formData, {
+    params: adminId ? { admin_id: adminId } : undefined,
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
   });
-export const getAllProjectsAPI = () => api.get('/projects/');
+export const getAllProjectsAPI = (params) => api.get('/projects/', { params });
 export const getProjectDetailsAPI = (id) => api.get(`/projects/${id}`);
 export const createProjectAPI = (data) => api.post('/projects/', data);
 export const updateProjectAPI = (id, data) => api.put(`/projects/${id}`, data);
@@ -68,8 +71,8 @@ export const removeAssignmentAPI = (employeeId, projectId) =>
 // Admin
 export const getAdminAttendanceAPI = (params) => api.get('/admin/attendance', { params });
 export const get30DayReportAPI = () => api.get('/admin/attendance/30days');
-export const getOverviewAPI = () => api.get('/admin/overview');
-export const getTodayAttendanceSummaryAPI = () => api.get('/admin/today-attendance');
+export const getOverviewAPI = (params) => api.get('/admin/overview', { params });
+export const getTodayAttendanceSummaryAPI = (params) => api.get('/admin/today-attendance', { params });
 export const getHolidaysAPI = () => api.get('/admin/holidays');
 export const addHolidayAPI = (data) => api.post('/admin/holidays', data);
 export const deleteHolidayAPI = (id) => api.delete(`/admin/holidays/${id}`);

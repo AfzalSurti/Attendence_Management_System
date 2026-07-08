@@ -22,6 +22,7 @@ import ManageEmployeesScreen from '../screens/developer/ManageEmployeesScreen';
 import ManageProjectsScreen from '../screens/developer/ManageProjectsScreen';
 import ProjectDetailsScreen from '../screens/developer/ProjectDetailsScreen';
 import EmployeeAttendanceScreen from '../screens/developer/EmployeeAttendanceScreen';
+import ManageAdminsScreen from '../screens/developer/ManageAdminsScreen';
 
 // Admin
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -101,6 +102,7 @@ export default function AppNavigator() {
             <Stack.Screen name="ManageProjects" component={ManageProjectsScreen} />
             <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
             <Stack.Screen name="EmployeeAttendance" component={EmployeeAttendanceScreen} />
+            <Stack.Screen name="ManageAdmins" component={ManageAdminsScreen} />
             <Stack.Screen name="TodayAttendance" component={TodayAttendanceScreen} />
 
             {/* Admin */}

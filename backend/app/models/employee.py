@@ -16,4 +16,6 @@ class Employee(Base):
     mobile_number = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(Enum(RoleEnum), default=RoleEnum.employee)
+    owner_admin_id = Column(Integer, nullable=True)
+    admin_permission = Column(String, nullable=True, default="full")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

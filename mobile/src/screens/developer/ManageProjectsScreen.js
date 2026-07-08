@@ -5,10 +5,14 @@ import {
 } from 'react-native';
 import {
   getAllProjectsAPI, createProjectAPI,
-  updateProjectAPI, deleteProjectAPI, getProjectDetailsAPI
+  updateProjectAPI, deleteProjectAPI, getProjectDetailsAPI, getAdminsAPI
 } from '../../services/api';
+import { getUser } from '../../utils/storage';
 
 export default function ManageProjectsScreen({ navigation }) {
+  const [user, setUser] = useState(null);
+  const [admins, setAdmins] = useState([]);
+  const [selectedAdminId, setSelectedAdminId] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -16,12 +20,48 @@ export default function ManageProjectsScreen({ navigation }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [form, setForm] = useState({ project_number: '', project_name: '' });
   const [search, setSearch] = useState('');
+  const isReadOnlyAdmin = user?.role === 'admin' && user?.admin_permission === 'read_only';
 
-  useEffect(() => { loadProjects(); }, []);
+  useEffect(() => {
+    bootstrap();
+  }, []);
+
+  useEffect(() => {
+    if (user && (user.role !== 'developer' || selectedAdminId)) {
+      loadProjects();
+    }
+  }, [user, selectedAdminId]);
+
+  const bootstrap = async () => {
+    const currentUser = await getUser();
+    setUser(currentUser);
+
+    if (currentUser?.role === 'developer') {
+      try {
+        const res = await getAdminsAPI();
+        setAdmins(res.data);
+        if (res.data.length) {
+          setSelectedAdminId(res.data[0].id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        Alert.alert('Error', 'Failed to load admin accounts');
+        setLoading(false);
+      }
+      return;
+    }
+
+    loadProjects();
+  };
 
   const loadProjects = async () => {
+    setLoading(true);
     try {
-      const res = await getAllProjectsAPI();
+      const params = user?.role === 'developer' && selectedAdminId
+        ? { admin_id: selectedAdminId }
+        : undefined;
+      const res = await getAllProjectsAPI(params);
       const details = await Promise.all(
         res.data.map((p) => getProjectDetailsAPI(p.id).catch(() => null))
       );
@@ -43,7 +83,10 @@ export default function ManageProjectsScreen({ navigation }) {
       return;
     }
     try {
-      await createProjectAPI(form);
+      await createProjectAPI({
+        ...form,
+        admin_id: user?.role === 'developer' ? selectedAdminId : undefined,
+      });
       Alert.alert('Success', 'Project created successfully');
       setModalVisible(false);
       setForm({ project_number: '', project_name: '' });
@@ -129,18 +172,22 @@ export default function ManageProjectsScreen({ navigation }) {
         <Text style={styles.viewHint}>Tap to view details →</Text>
       </TouchableOpacity>
       <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => openEditModal(item)}
-        >
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => handleDelete(item)}
-        >
-          <Text style={styles.deleteBtnText}>Delete</Text>
-        </TouchableOpacity>
+        {!isReadOnlyAdmin && (
+          <>
+            <TouchableOpacity
+              style={styles.editBtn}
+              onPress={() => openEditModal(item)}
+            >
+              <Text style={styles.editBtnText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={() => handleDelete(item)}
+            >
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -161,10 +208,46 @@ export default function ManageProjectsScreen({ navigation }) {
         <Text style={styles.title}>Manage Projects</Text>
       </View>
 
-      {/* Add Button */}
-      <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
-        <Text style={styles.addBtnText}>+ Add Project</Text>
-      </TouchableOpacity>
+      {user?.role === 'developer' && (
+        <View style={styles.adminScopeCard}>
+          <Text style={styles.adminScopeTitle}>Selected Admin</Text>
+          <FlatList
+            data={admins}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => {
+              const active = selectedAdminId === item.id;
+              return (
+                <TouchableOpacity
+                  style={[styles.adminChip, active && styles.adminChipActive]}
+                  onPress={() => setSelectedAdminId(item.id)}
+                >
+                  <Text style={[styles.adminChipText, active && styles.adminChipTextActive]}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+            contentContainerStyle={styles.adminChipRow}
+          />
+          <Text style={styles.adminScopeHint}>
+            Projects shown below belong to the selected admin account.
+          </Text>
+        </View>
+      )}
+
+      {isReadOnlyAdmin && (
+        <Text style={styles.readOnlyNote}>
+          Read-only admin: you can view projects and assigned employees, but you cannot change project data.
+        </Text>
+      )}
+
+      {!isReadOnlyAdmin && (
+        <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
+          <Text style={styles.addBtnText}>+ Add Project</Text>
+        </TouchableOpacity>
+      )}
 
       <TextInput
         style={styles.searchInput}
@@ -242,6 +325,36 @@ const styles = StyleSheet.create({
   header: { marginTop: 50, marginBottom: 16 },
   back: { color: '#1a237e', fontSize: 16, marginBottom: 8 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a237e' },
+  adminScopeCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#dbe4ff',
+  },
+  adminScopeTitle: { fontSize: 13, fontWeight: '700', color: '#1a237e', marginBottom: 8 },
+  adminChipRow: { gap: 8 },
+  adminChip: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  adminChipActive: { backgroundColor: '#1a237e' },
+  adminChipText: { color: '#1a237e', fontSize: 12, fontWeight: '700' },
+  adminChipTextActive: { color: '#fff' },
+  adminScopeHint: { fontSize: 12, color: '#64748b', marginTop: 10 },
+  readOnlyNote: {
+    fontSize: 12,
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+    fontWeight: '600',
+  },
   addBtn: {
     backgroundColor: '#1a237e', padding: 14,
     borderRadius: 12, alignItems: 'center', marginBottom: 16

@@ -4,29 +4,58 @@ import {
   ScrollView, ActivityIndicator
 } from 'react-native';
 import { getUser, clearStorage } from '../../utils/storage';
-import { getAllEmployeesAPI, getAllProjectsAPI, getTodayAttendanceSummaryAPI } from '../../services/api';
+import { getAllEmployeesAPI, getAllProjectsAPI, getTodayAttendanceSummaryAPI, getAdminsAPI } from '../../services/api';
 import TodayAttendanceSummary from '../../components/TodayAttendanceSummary';
 import { isWeb } from '../../utils/platform';
 
 export default function DevDashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
+  const [admins, setAdmins] = useState([]);
+  const [selectedAdminId, setSelectedAdminId] = useState(null);
   const [employeeCount, setEmployeeCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [todaySummary, setTodaySummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    bootstrap();
   }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (user && (user.role !== 'developer' || selectedAdminId)) {
+      loadData();
+    }
+  }, [user, selectedAdminId]);
+
+  const bootstrap = async () => {
     const u = await getUser();
     setUser(u);
+    if (u?.role === 'developer') {
+      try {
+        const res = await getAdminsAPI();
+        setAdmins(res.data);
+        if (res.data.length) {
+          setSelectedAdminId(res.data[0].id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.log(err);
+        setLoading(false);
+      }
+      return;
+    }
+    loadData();
+  };
+
+  const loadData = async () => {
+    setLoading(true);
     try {
+      const params = selectedAdminId ? { admin_id: selectedAdminId } : undefined;
       const [empRes, projRes, todayRes] = await Promise.all([
-        getAllEmployeesAPI(),
-        getAllProjectsAPI(),
-        getTodayAttendanceSummaryAPI(),
+        getAllEmployeesAPI(params),
+        getAllProjectsAPI(params),
+        getTodayAttendanceSummaryAPI(params),
       ]);
       setEmployeeCount(empRes.data.length);
       setProjectCount(projRes.data.length);
@@ -59,6 +88,29 @@ export default function DevDashboardScreen({ navigation }) {
             <Text style={styles.heroSub}>
               Manage operations, track attendance, and control project data from the web dashboard.
             </Text>
+            {!!admins.length && (
+              <>
+                <Text style={styles.adminFilterLabel}>Viewing data for</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                  <View style={styles.adminChipRow}>
+                    {admins.map((admin) => {
+                      const active = selectedAdminId === admin.id;
+                      return (
+                        <TouchableOpacity
+                          key={admin.id}
+                          style={[styles.adminChip, active && styles.adminChipActive]}
+                          onPress={() => setSelectedAdminId(admin.id)}
+                        >
+                          <Text style={[styles.adminChipText, active && styles.adminChipTextActive]}>
+                            {admin.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </>
+            )}
           </View>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
             <Text style={styles.logoutText}>Logout</Text>
@@ -127,6 +179,18 @@ export default function DevDashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={() => navigation.navigate('ManageAdmins')}
+          >
+            <Text style={styles.menuIcon}>🛡️</Text>
+            <View style={styles.menuBody}>
+              <Text style={styles.menuTitle}>Manage Admins</Text>
+              <Text style={styles.menuSub}>Create admin accounts and control full or read-only access</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => navigation.navigate('Holidays')}
           >
             <Text style={styles.menuIcon}>🗓️</Text>
@@ -166,6 +230,17 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 14, color: '#64748b', fontWeight: '600' },
   name: { fontSize: 32, fontWeight: '800', color: '#1e1b4b', marginTop: 6 },
   heroSub: { fontSize: 14, color: '#475569', marginTop: 10, maxWidth: 540, lineHeight: 21 },
+  adminFilterLabel: { fontSize: 12, color: '#64748b', marginTop: 14, fontWeight: '700' },
+  adminChipRow: { flexDirection: 'row', gap: 8 },
+  adminChip: {
+    backgroundColor: '#eef2ff',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  adminChipActive: { backgroundColor: '#1a237e' },
+  adminChipText: { color: '#1a237e', fontSize: 12, fontWeight: '700' },
+  adminChipTextActive: { color: '#fff' },
   logoutBtn: { backgroundColor: '#ffebee', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
   logoutText: { color: '#c62828', fontWeight: 'bold', fontSize: 13 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },

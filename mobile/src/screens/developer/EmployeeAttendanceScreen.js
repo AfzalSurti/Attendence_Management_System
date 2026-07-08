@@ -7,6 +7,7 @@ import { getAdminAttendanceAPI, updateAttendanceAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { formatCoords, coordsToForm, parseCoord } from '../../utils/coordinates';
 import AttendanceSelfies from '../../components/AttendanceSelfies';
+import { getUser } from '../../utils/storage';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '--';
@@ -48,6 +49,7 @@ const calcWorkingHours = (checkinIso, checkoutIso) => {
 
 export default function EmployeeAttendanceScreen({ navigation, route }) {
   const employee = route.params?.employee;
+  const [user, setUser] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,6 +64,7 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
     checkout_latitude: '',
     checkout_longitude: '',
   });
+  const isReadOnlyAdmin = user?.role === 'admin' && user?.admin_permission === 'read_only';
 
   const loadRecords = useCallback(async () => {
     if (!employee?.id) return;
@@ -77,6 +80,7 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
   }, [employee?.id]);
 
   useEffect(() => {
+    getUser().then(setUser);
     loadRecords();
   }, [loadRecords]);
 
@@ -179,9 +183,11 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
           checkinUrl={item.checkin_selfie_url}
           checkoutUrl={item.checkout_selfie_url}
         />
-        <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
+        {!isReadOnlyAdmin && (
+          <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
+            <Text style={styles.editBtnText}>Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -214,6 +220,12 @@ export default function EmployeeAttendanceScreen({ navigation, route }) {
         <Text style={styles.title}>{employee.name}</Text>
         <Text style={styles.subtitle}>Attendance Records</Text>
       </View>
+
+      {isReadOnlyAdmin && (
+        <Text style={styles.readOnlyNote}>
+          Read-only admin: attendance records can be viewed but not edited.
+        </Text>
+      )}
 
       <FlatList
         data={records}
@@ -328,6 +340,15 @@ const styles = StyleSheet.create({
   back: { color: '#1a237e', fontSize: 16, marginBottom: 8 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a237e' },
   subtitle: { fontSize: 14, color: '#666', marginTop: 4 },
+  readOnlyNote: {
+    fontSize: 12,
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+    fontWeight: '600',
+  },
   card: {
     backgroundColor: '#fff', borderRadius: 16,
     padding: 14, marginBottom: 10, elevation: 3,
