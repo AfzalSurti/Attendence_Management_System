@@ -6,6 +6,7 @@ import {
 import { getUser, clearStorage } from '../../utils/storage';
 import { getAllEmployeesAPI, getAllProjectsAPI, getTodayAttendanceSummaryAPI } from '../../services/api';
 import TodayAttendanceSummary from '../../components/TodayAttendanceSummary';
+import { isWeb } from '../../utils/platform';
 
 export default function DevDashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -50,92 +51,129 @@ export default function DevDashboardScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Developer Panel 👨‍💻</Text>
-          <Text style={styles.name}>{user?.name}</Text>
+      <View style={[styles.content, isWeb && styles.webContent]}>
+        <View style={[styles.heroCard, isWeb && styles.heroCardWeb]}>
+          <View>
+            <Text style={styles.greeting}>Developer workspace</Text>
+            <Text style={styles.name}>{user?.name}</Text>
+            <Text style={styles.heroSub}>
+              Manage operations, track attendance, and control project data from the web dashboard.
+            </Text>
+          </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+
+        <View style={[styles.statsRow, isWeb && styles.statsRowWeb]}>
+          <View style={[styles.statCard, styles.statCardPrimary]}>
+            <Text style={styles.statNumber}>{employeeCount}</Text>
+            <Text style={styles.statLabel}>Employees</Text>
+          </View>
+          <View style={[styles.statCard, styles.statCardSecondary]}>
+            <Text style={styles.statNumber}>{projectCount}</Text>
+            <Text style={styles.statLabel}>Projects</Text>
+          </View>
+        </View>
+
+        <TodayAttendanceSummary
+          summary={todaySummary}
+          onPressPresent={() => navigation.navigate('TodayAttendance', { type: 'present' })}
+          onPressAbsent={() => navigation.navigate('TodayAttendance', { type: 'absent' })}
+        />
+
+        <Text style={styles.sectionTitle}>Manage</Text>
+
+        <View style={[styles.menuGrid, isWeb && styles.menuGridWeb]}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('ManageEmployees')}
+          >
+            <Text style={styles.menuIcon}>👥</Text>
+            <View style={styles.menuBody}>
+              <Text style={styles.menuTitle}>Manage Employees</Text>
+              <Text style={styles.menuSub}>Create, edit, delete employees</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('ManageProjects')}
+          >
+            <Text style={styles.menuIcon}>📁</Text>
+            <View style={styles.menuBody}>
+              <Text style={styles.menuTitle}>Manage Projects</Text>
+              <Text style={styles.menuSub}>Create, edit, delete projects</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{employeeCount}</Text>
-          <Text style={styles.statLabel}>Employees</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{projectCount}</Text>
-          <Text style={styles.statLabel}>Projects</Text>
-        </View>
-      </View>
-
-      <TodayAttendanceSummary
-        summary={todaySummary}
-        onPressPresent={() => navigation.navigate('TodayAttendance', { type: 'present' })}
-        onPressAbsent={() => navigation.navigate('TodayAttendance', { type: 'absent' })}
-      />
-
-      {/* Actions */}
-      <Text style={styles.sectionTitle}>Manage</Text>
-
-      <TouchableOpacity
-        style={styles.menuItem}
-        onPress={() => navigation.navigate('ManageEmployees')}
-      >
-        <Text style={styles.menuIcon}>👥</Text>
-        <View>
-          <Text style={styles.menuTitle}>Manage Employees</Text>
-          <Text style={styles.menuSub}>Create, edit, delete employees</Text>
-        </View>
-        <Text style={styles.arrow}>›</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuItem}
-        onPress={() => navigation.navigate('ManageProjects')}
-      >
-        <Text style={styles.menuIcon}>📁</Text>
-        <View>
-          <Text style={styles.menuTitle}>Manage Projects</Text>
-          <Text style={styles.menuSub}>Create, edit, delete projects</Text>
-        </View>
-        <Text style={styles.arrow}>›</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f2ff', padding: 20 },
+  container: { flex: 1, backgroundColor: '#f8faff' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginTop: 50, marginBottom: 24
+  content: { padding: 20, paddingTop: 36, paddingBottom: 36 },
+  webContent: { paddingHorizontal: 32, paddingTop: 32 },
+  heroCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#312e81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
   },
-  greeting: { fontSize: 14, color: '#666' },
-  name: { fontSize: 22, fontWeight: 'bold', color: '#1a237e' },
-  logoutBtn: { backgroundColor: '#ffebee', padding: 8, borderRadius: 8 },
+  heroCardWeb: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  greeting: { fontSize: 14, color: '#64748b', fontWeight: '600' },
+  name: { fontSize: 32, fontWeight: '800', color: '#1e1b4b', marginTop: 6 },
+  heroSub: { fontSize: 14, color: '#475569', marginTop: 10, maxWidth: 540, lineHeight: 21 },
+  logoutBtn: { backgroundColor: '#ffebee', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999 },
   logoutText: { color: '#c62828', fontWeight: 'bold', fontSize: 13 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+  statsRowWeb: { gap: 16 },
   statCard: {
-    flex: 1, backgroundColor: '#1a237e', borderRadius: 16,
-    padding: 20, alignItems: 'center'
+    flex: 1,
+    borderRadius: 24,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
   },
-  statNumber: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-  statLabel: { fontSize: 13, color: '#c5cae9', marginTop: 4 },
+  statCardPrimary: { backgroundColor: '#312e81' },
+  statCardSecondary: { backgroundColor: '#4338ca' },
+  statNumber: { fontSize: 34, fontWeight: '800', color: '#fff' },
+  statLabel: { fontSize: 12, color: '#dbeafe', marginTop: 6, fontWeight: '600' },
   sectionTitle: {
-    fontSize: 16, fontWeight: 'bold', color: '#1a237e', marginBottom: 12
+    fontSize: 18, fontWeight: 'bold', color: '#1e1b4b', marginBottom: 12
   },
+  menuGrid: { gap: 12 },
+  menuGridWeb: { gap: 16 },
   menuItem: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    flexDirection: 'row', alignItems: 'center', marginBottom: 12, elevation: 3
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#312e81',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
   },
   menuIcon: { fontSize: 28, marginRight: 14 },
-  menuTitle: { fontSize: 15, fontWeight: 'bold', color: '#333' },
-  menuSub: { fontSize: 12, color: '#888', marginTop: 2 },
-  arrow: { fontSize: 24, color: '#1a237e', marginLeft: 'auto' },
+  menuBody: { flex: 1 },
+  menuTitle: { fontSize: 16, fontWeight: '700', color: '#1f2937' },
+  menuSub: { fontSize: 13, color: '#64748b', marginTop: 4, lineHeight: 19 },
+  arrow: { fontSize: 24, color: '#4338ca', marginLeft: 'auto' },
 });

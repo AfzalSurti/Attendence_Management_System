@@ -22,15 +22,19 @@ export default function WebShell({ children }) {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: '#e8eaf6',
+    backgroundColor: '#eef2ff',
     alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
   },
   shell: {
     flex: 1,
-    backgroundColor: '#f0f2ff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    backgroundColor: '#f8faff',
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#312e81',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 30,
   },
 });
