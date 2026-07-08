@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, TextInput,
 } from 'react-native';
 import { getAllProjectsAPI, getProjectDetailsAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 export default function AdminProjectsScreen({ navigation }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     loadProjects();
@@ -49,6 +50,18 @@ export default function AdminProjectsScreen({ navigation }) {
     </TouchableOpacity>
   );
 
+  const filteredProjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const list = query
+      ? projects.filter((project) =>
+          project.project_name.toLowerCase().includes(query) ||
+          project.project_number.toLowerCase().includes(query)
+        )
+      : projects;
+
+    return [...list].sort((a, b) => a.project_name.localeCompare(b.project_name));
+  }, [projects, search]);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -67,16 +80,26 @@ export default function AdminProjectsScreen({ navigation }) {
         <Text style={styles.subtitle}>View-only — tap a project for full details</Text>
       </View>
 
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by project name or code..."
+        placeholderTextColor="#94a3b8"
+        value={search}
+        onChangeText={setSearch}
+      />
+
       <FlatList
-        data={projects}
+        data={filteredProjects}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderProject}
         contentContainerStyle={{ paddingBottom: 30 }}
         ListHeaderComponent={
-          <Text style={styles.countText}>{projects.length} projects</Text>
+          <Text style={styles.countText}>
+            {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
+          </Text>
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No projects found</Text>
+          <Text style={styles.emptyText}>No projects match your search</Text>
         }
       />
     </View>
@@ -90,6 +113,16 @@ const styles = StyleSheet.create({
   back: { color: '#1a237e', fontSize: 16, marginBottom: 8 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#1a237e' },
   subtitle: { fontSize: 13, color: '#666', marginTop: 4 },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#dbe4ff',
+    color: '#1f2937',
+  },
   countText: { fontSize: 13, color: '#666', marginBottom: 12 },
   card: {
     backgroundColor: '#fff', borderRadius: 16, padding: 16,

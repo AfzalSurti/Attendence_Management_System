@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal
@@ -15,6 +15,7 @@ export default function ManageProjectsScreen({ navigation }) {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [form, setForm] = useState({ project_number: '', project_name: '' });
+  const [search, setSearch] = useState('');
 
   useEffect(() => { loadProjects(); }, []);
 
@@ -102,6 +103,18 @@ export default function ManageProjectsScreen({ navigation }) {
     setModalVisible(true);
   };
 
+  const filteredProjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const list = query
+      ? projects.filter((project) =>
+          project.project_name.toLowerCase().includes(query) ||
+          project.project_number.toLowerCase().includes(query)
+        )
+      : projects;
+
+    return [...list].sort((a, b) => a.project_name.localeCompare(b.project_name));
+  }, [projects, search]);
+
   const renderProject = ({ item }) => (
     <View style={styles.card}>
       <TouchableOpacity
@@ -153,14 +166,31 @@ export default function ManageProjectsScreen({ navigation }) {
         <Text style={styles.addBtnText}>+ Add Project</Text>
       </TouchableOpacity>
 
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by project name or code..."
+        placeholderTextColor="#94a3b8"
+        value={search}
+        onChangeText={setSearch}
+      />
+
+      <Text style={styles.helperText}>
+        Tap a project to view employees assigned to that project.
+      </Text>
+
       {/* List */}
       <FlatList
-        data={projects}
+        data={filteredProjects}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderProject}
         contentContainerStyle={{ paddingBottom: 30 }}
+        ListHeaderComponent={
+          <Text style={styles.countText}>
+            {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}
+          </Text>
+        }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No projects found</Text>
+          <Text style={styles.emptyText}>No projects match your search</Text>
         }
       />
 
@@ -217,6 +247,18 @@ const styles = StyleSheet.create({
     borderRadius: 12, alignItems: 'center', marginBottom: 16
   },
   addBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#dbe4ff',
+    color: '#1f2937',
+  },
+  helperText: { fontSize: 12, color: '#64748b', marginBottom: 10 },
+  countText: { fontSize: 13, color: '#64748b', marginBottom: 12 },
   card: {
     backgroundColor: '#fff', borderRadius: 16,
     padding: 14, marginBottom: 10, elevation: 3,
