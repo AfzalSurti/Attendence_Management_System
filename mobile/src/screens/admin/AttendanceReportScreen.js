@@ -13,6 +13,7 @@ import { exportBulkAttendanceExcel, exportBulkAttendancePdf } from '../../utils/
 import { getUser } from '../../utils/storage';
 import DataTable from '../../components/DataTable';
 import { isWeb } from '../../utils/platform';
+import { webPageStyles } from '../../utils/webScrollLayout';
 
 export default function AttendanceReportScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -348,8 +349,8 @@ export default function AttendanceReportScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, isWeb && webPageStyles.webPage]}>
+      <View style={[styles.header, isWeb && webPageStyles.webHeader]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
@@ -358,7 +359,11 @@ export default function AttendanceReportScreen({ navigation }) {
       </View>
 
       {isWeb ? (
-        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+        <ScrollView
+          style={webPageStyles.webBody}
+          contentContainerStyle={webPageStyles.webBodyContent}
+          showsVerticalScrollIndicator
+        >
           {listHeader}
           <DataTable
             columns={reportTableColumns}

@@ -6,6 +6,7 @@ import { getProjectDetailsAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import DataTable from '../../components/DataTable';
 import { isWeb } from '../../utils/platform';
+import { webPageStyles } from '../../utils/webScrollLayout';
 
 export default function ProjectDetailsScreen({ navigation, route }) {
   const project = route.params?.project;
@@ -73,17 +74,54 @@ export default function ProjectDetailsScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, isWeb && webPageStyles.webPage]}>
+      <View style={[styles.header, isWeb && webPageStyles.webHeader]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{details?.project_name || project.project_name}</Text>
         <Text style={styles.subtitle}>{details?.project_number || project.project_number}</Text>
-        <Text style={styles.hint}>
-          Assign or remove employees from Manage Employees
-        </Text>
       </View>
+
+      {isWeb ? (
+        <ScrollView
+          style={webPageStyles.webBody}
+          contentContainerStyle={webPageStyles.webBodyContent}
+          showsVerticalScrollIndicator
+        >
+          <Text style={styles.hint}>
+            Assign or remove employees from Manage Employees
+          </Text>
+
+          <View style={styles.infoCard}>
+            <View style={styles.infoGrid}>
+              <View style={styles.infoBlock}>
+                <Text style={styles.infoLabel}>Project Code</Text>
+                <Text style={styles.infoValue}>{details?.project_number}</Text>
+              </View>
+              <View style={styles.infoBlock}>
+                <Text style={styles.infoLabel}>Project Name</Text>
+                <Text style={styles.infoValue}>{details?.project_name}</Text>
+              </View>
+            </View>
+            <View style={styles.countBox}>
+              <Text style={styles.countNumber}>{details?.employee_count ?? 0}</Text>
+              <Text style={styles.countLabel}>Employees Assigned</Text>
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>Assigned Employees</Text>
+          <DataTable
+            columns={employeeColumns}
+            rows={employeeRows}
+            emptyMessage="No employees assigned to this project"
+          />
+        </ScrollView>
+      ) : (
+        <>
+      <Text style={styles.hint}>
+        Assign or remove employees from Manage Employees
+      </Text>
 
       <View style={styles.infoCard}>
         <View style={styles.infoGrid}>
@@ -103,22 +141,16 @@ export default function ProjectDetailsScreen({ navigation, route }) {
       </View>
 
       <Text style={styles.sectionTitle}>Assigned Employees</Text>
-      {isWeb ? (
-        <DataTable
-          columns={employeeColumns}
-          rows={employeeRows}
-          emptyMessage="No employees assigned to this project"
-        />
-      ) : (
-        <FlatList
-          data={details?.employees || []}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderEmployee}
-          contentContainerStyle={{ paddingBottom: 30 }}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No employees assigned to this project</Text>
-          }
-        />
+      <FlatList
+        data={details?.employees || []}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderEmployee}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No employees assigned to this project</Text>
+        }
+      />
+        </>
       )}
     </View>
   );

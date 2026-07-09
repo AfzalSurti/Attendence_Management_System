@@ -11,6 +11,8 @@ import { formatDisplayDate, formatDisplayTime, formatHours } from '../../utils/d
 import AttendanceSelfies from '../../components/AttendanceSelfies';
 import { getDateRange, PRESET_LABELS } from '../../utils/dateRanges';
 import { exportAttendanceExcel, exportAttendancePdf } from '../../utils/reportExport';
+import { isWeb } from '../../utils/platform';
+import { webPageStyles } from '../../utils/webScrollLayout';
 
 export default function AdminEmployeeReportScreen({ navigation, route }) {
   const employee = route.params?.employee;
@@ -156,8 +158,8 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, isWeb && webPageStyles.webPage]}>
+      <View style={[styles.header, isWeb && webPageStyles.webHeader]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
@@ -165,6 +167,72 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
         <Text style={styles.subtitle}>{employee.mobile_number}</Text>
       </View>
 
+      {isWeb ? (
+        <ScrollView
+          style={webPageStyles.webBody}
+          contentContainerStyle={webPageStyles.webBodyContent}
+          showsVerticalScrollIndicator
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
+            {['all', '7days', '15days', '30days'].map((preset) => (
+              <TouchableOpacity
+                key={preset}
+                style={[styles.presetBtn, activePreset === preset && styles.presetBtnActive]}
+                onPress={() => selectPreset(preset)}
+              >
+                <Text style={[styles.presetText, activePreset === preset && styles.presetTextActive]}>
+                  {PRESET_LABELS[preset]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity style={styles.customOpenBtn} onPress={openCustomModal}>
+            <Text style={styles.customOpenBtnText}>Select Custom Date Range</Text>
+          </TouchableOpacity>
+
+          <View style={styles.exportRow}>
+            <TouchableOpacity
+              style={styles.exportBtn}
+              onPress={() => handleExport('pdf')}
+              disabled={!!exporting}
+            >
+              {exporting === 'pdf'
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.exportBtnText}>📄 Download PDF</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.exportBtn, styles.excelBtn]}
+              onPress={() => handleExport('excel')}
+              disabled={!!exporting}
+            >
+              {exporting === 'excel'
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.exportBtnText}>📊 Download Excel</Text>}
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color="#1a237e" />
+            </View>
+          ) : (
+            <>
+              <Text style={styles.countText}>
+                {records.length} records · {getRangeLabel()}
+              </Text>
+              {records.length === 0 ? (
+                <Text style={styles.emptyText}>No attendance records for this period</Text>
+              ) : (
+                records.map((item) => (
+                  <View key={String(item.id)}>{renderRecord({ item })}</View>
+                ))
+              )}
+            </>
+          )}
+        </ScrollView>
+      ) : (
+        <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
         {['all', '7days', '15days', '30days'].map((preset) => (
           <TouchableOpacity
@@ -223,6 +291,8 @@ export default function AdminEmployeeReportScreen({ navigation, route }) {
             <Text style={styles.emptyText}>No attendance records for this period</Text>
           }
         />
+      )}
+        </>
       )}
 
       <Modal visible={customModalVisible} transparent animationType="slide">

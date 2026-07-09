@@ -13,6 +13,8 @@ import EmployeeBulkUpload from '../../components/EmployeeBulkUpload';
 import DataTable from '../../components/DataTable';
 import { getUser } from '../../utils/storage';
 import { isWeb } from '../../utils/platform';
+import { webPageStyles } from '../../utils/webScrollLayout';
+import { webPageStyles } from '../../utils/webScrollLayout';
 
 const emptyNewProject = () => ({ project_number: '', project_name: '' });
 
@@ -422,63 +424,67 @@ export default function ManageEmployeesScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, isWeb && webPageStyles.webPage]}>
+      <View style={[styles.header, isWeb && webPageStyles.webHeader]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Manage Employees</Text>
       </View>
 
-      {user?.role === 'developer' && (
-        <View style={styles.adminScopeCard}>
-          <Text style={styles.adminScopeTitle}>Selected Admin</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.adminChipRow}>
-              {admins.map((admin) => {
-                const active = selectedAdminId === admin.id;
-                return (
-                  <TouchableOpacity
-                    key={admin.id}
-                    style={[styles.adminChip, active && styles.adminChipActive]}
-                    onPress={() => setSelectedAdminId(admin.id)}
-                  >
-                    <Text style={[styles.adminChipText, active && styles.adminChipTextActive]}>
-                      {admin.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-          <Text style={styles.adminScopeHint}>
-            Employees, projects, and bulk uploads now apply to the selected admin account.
-          </Text>
-        </View>
-      )}
-
-      {isReadOnlyAdmin && (
-        <Text style={styles.readOnlyNote}>
-          Read-only admin: you can view employee and project data, but you cannot make changes.
-        </Text>
-      )}
-
-      {!isReadOnlyAdmin && (
-        <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
-          <Text style={styles.addBtnText}>+ Add Employee</Text>
-        </TouchableOpacity>
-      )}
-
-      {!isReadOnlyAdmin && (
-        <EmployeeBulkUpload
-          onComplete={loadData}
-          adminId={selectedAdminId}
-          requiresAdminSelection={user?.role === 'developer'}
-        />
-      )}
-
       {isWeb ? (
-        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+        <ScrollView
+          style={webPageStyles.webBody}
+          contentContainerStyle={webPageStyles.webBodyContent}
+          showsVerticalScrollIndicator
+        >
+          {user?.role === 'developer' && (
+            <View style={styles.adminScopeCard}>
+              <Text style={styles.adminScopeTitle}>Selected Admin</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.adminChipRow}>
+                  {admins.map((admin) => {
+                    const active = selectedAdminId === admin.id;
+                    return (
+                      <TouchableOpacity
+                        key={admin.id}
+                        style={[styles.adminChip, active && styles.adminChipActive]}
+                        onPress={() => setSelectedAdminId(admin.id)}
+                      >
+                        <Text style={[styles.adminChipText, active && styles.adminChipTextActive]}>
+                          {admin.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+              <Text style={styles.adminScopeHint}>
+                Employees, projects, and bulk uploads now apply to the selected admin account.
+              </Text>
+            </View>
+          )}
+
+          {isReadOnlyAdmin && (
+            <Text style={styles.readOnlyNote}>
+              Read-only admin: you can view employee and project data, but you cannot make changes.
+            </Text>
+          )}
+
+          {!isReadOnlyAdmin && (
+            <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
+              <Text style={styles.addBtnText}>+ Add Employee</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isReadOnlyAdmin && (
+            <EmployeeBulkUpload
+              onComplete={loadData}
+              adminId={selectedAdminId}
+              requiresAdminSelection={user?.role === 'developer'}
+            />
+          )}
+
           <DataTable
             columns={employeeTableColumns}
             rows={employeeTableRows}
@@ -486,15 +492,64 @@ export default function ManageEmployeesScreen({ navigation }) {
           />
         </ScrollView>
       ) : (
-        <FlatList
-          data={employees}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderEmployee}
-          contentContainerStyle={{ paddingBottom: 30 }}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No employees found</Text>
-          }
-        />
+        <>
+          {user?.role === 'developer' && (
+            <View style={styles.adminScopeCard}>
+              <Text style={styles.adminScopeTitle}>Selected Admin</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.adminChipRow}>
+                  {admins.map((admin) => {
+                    const active = selectedAdminId === admin.id;
+                    return (
+                      <TouchableOpacity
+                        key={admin.id}
+                        style={[styles.adminChip, active && styles.adminChipActive]}
+                        onPress={() => setSelectedAdminId(admin.id)}
+                      >
+                        <Text style={[styles.adminChipText, active && styles.adminChipTextActive]}>
+                          {admin.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+              <Text style={styles.adminScopeHint}>
+                Employees, projects, and bulk uploads now apply to the selected admin account.
+              </Text>
+            </View>
+          )}
+
+          {isReadOnlyAdmin && (
+            <Text style={styles.readOnlyNote}>
+              Read-only admin: you can view employee and project data, but you cannot make changes.
+            </Text>
+          )}
+
+          {!isReadOnlyAdmin && (
+            <TouchableOpacity style={styles.addBtn} onPress={openCreateModal}>
+              <Text style={styles.addBtnText}>+ Add Employee</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isReadOnlyAdmin && (
+            <EmployeeBulkUpload
+              onComplete={loadData}
+              adminId={selectedAdminId}
+              requiresAdminSelection={user?.role === 'developer'}
+            />
+          )}
+
+          <FlatList
+            data={employees}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderEmployee}
+            contentContainerStyle={{ paddingBottom: 30 }}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No employees found</Text>
+            }
+          />
+        </>
       )}
 
       <Modal visible={modalVisible} transparent animationType="slide">

@@ -6,6 +6,7 @@ import { getTodayAttendanceSummaryAPI } from '../../services/api';
 import { formatDisplayDate, formatDisplayTime, formatHours } from '../../utils/display';
 import DataTable from '../../components/DataTable';
 import { isWeb } from '../../utils/platform';
+import { webPageStyles } from '../../utils/webScrollLayout';
 
 export default function TodayAttendanceScreen({ navigation, route }) {
   const listType = route.params?.type || 'present';
@@ -131,8 +132,8 @@ export default function TodayAttendanceScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, isWeb && webPageStyles.webPage]}>
+      <View style={[styles.header, isWeb && webPageStyles.webHeader]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
@@ -144,7 +145,11 @@ export default function TodayAttendanceScreen({ navigation, route }) {
       </View>
 
       {isWeb ? (
-        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+        <ScrollView
+          style={webPageStyles.webBody}
+          contentContainerStyle={webPageStyles.webBodyContent}
+          showsVerticalScrollIndicator
+        >
           <DataTable
             columns={listType === 'present' ? presentColumns : absentColumns}
             rows={tableRows}

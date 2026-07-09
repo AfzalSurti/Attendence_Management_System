@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { isWeb } from '../utils/platform';
 
 export default function WebShell({ children }) {
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8faff',
     borderRadius: 28,
-    overflow: 'hidden',
+    overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
     shadowColor: '#312e81',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.12,
