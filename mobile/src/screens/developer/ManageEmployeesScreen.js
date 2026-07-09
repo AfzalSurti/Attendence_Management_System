@@ -14,7 +14,6 @@ import DataTable from '../../components/DataTable';
 import { getUser } from '../../utils/storage';
 import { isWeb } from '../../utils/platform';
 import { webPageStyles } from '../../utils/webScrollLayout';
-import { webPageStyles } from '../../utils/webScrollLayout';
 
 const emptyNewProject = () => ({ project_number: '', project_name: '' });
 
