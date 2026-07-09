@@ -193,7 +193,7 @@ export default function AttendanceReportScreen({ navigation }) {
   const getProjectLabel = (employeeId) => {
     const assigned = assignments[employeeId] || [];
     if (!assigned.length) return 'No project assigned';
-    return assigned.map((p) => p.project_number).join(', ');
+    return assigned.map((p) => `${p.project_number} — ${p.project_name}`).join(', ');
   };
 
   const reportTableColumns = [
@@ -292,7 +292,7 @@ export default function AttendanceReportScreen({ navigation }) {
             onPress={() => setSelectedProjectId(p.id)}
           >
             <Text style={[styles.chipText, selectedProjectId === p.id && styles.chipTextActive]}>
-              {p.project_number}
+              {p.project_number} — {p.project_name}
             </Text>
           </TouchableOpacity>
         ))}
