@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { getTodayAttendanceSummaryAPI } from '../../services/api';
 import { formatDisplayDate, formatDisplayTime, formatHours } from '../../utils/display';
+import DataTable from '../../components/DataTable';
+import { isWeb } from '../../utils/platform';
 
 export default function TodayAttendanceScreen({ navigation, route }) {
   const listType = route.params?.type || 'present';
@@ -32,6 +34,66 @@ export default function TodayAttendanceScreen({ navigation, route }) {
   const subtitle = listType === 'present'
     ? 'Employees who marked attendance today'
     : 'Employees who have not marked attendance yet';
+
+  const presentColumns = [
+    { key: 'index', label: '#', flex: 0.4 },
+    { key: 'name', label: 'Name', flex: 1.2 },
+    { key: 'mobile_number', label: 'Mobile', flex: 1 },
+    {
+      key: 'project',
+      label: 'Project',
+      flex: 1.4,
+      render: (row) => (
+        <Text style={styles.tableCell}>{row.project_code} — {row.project_name}</Text>
+      ),
+    },
+    {
+      key: 'checkin',
+      label: 'Check-in',
+      flex: 0.9,
+      render: (row) => (
+        <Text style={styles.badgeGreen}>{formatDisplayTime(row.checkin_time)}</Text>
+      ),
+    },
+    {
+      key: 'checkout',
+      label: 'Check-out',
+      flex: 0.9,
+      render: (row) => (
+        <Text style={row.checkout_time ? styles.badgeBlue : styles.badgeGray}>
+          {formatDisplayTime(row.checkout_time)}
+        </Text>
+      ),
+    },
+    {
+      key: 'hours',
+      label: 'Hours',
+      flex: 0.7,
+      render: (row) => (
+        <Text style={styles.tableCell}>
+          {row.working_hours != null ? formatHours(row.working_hours) : '—'}
+        </Text>
+      ),
+    },
+  ];
+
+  const absentColumns = [
+    { key: 'index', label: '#', flex: 0.5 },
+    { key: 'name', label: 'Name', flex: 1.5 },
+    { key: 'mobile_number', label: 'Mobile', flex: 1.2 },
+    {
+      key: 'status',
+      label: 'Status',
+      flex: 1,
+      render: () => <Text style={styles.absentTag}>Not checked in</Text>,
+    },
+  ];
+
+  const tableRows = employees.map((item, index) => ({
+    ...item,
+    key: String(item.employee_id),
+    index: index + 1,
+  }));
 
   const renderPresent = ({ item }) => (
     <View style={styles.card}>
@@ -81,17 +143,31 @@ export default function TodayAttendanceScreen({ navigation, route }) {
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      <FlatList
-        data={employees}
-        keyExtractor={(item) => item.employee_id.toString()}
-        renderItem={listType === 'present' ? renderPresent : renderAbsent}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {listType === 'present' ? 'No one has checked in yet today.' : 'Everyone has marked attendance today.'}
-          </Text>
-        }
-      />
+      {isWeb ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+          <DataTable
+            columns={listType === 'present' ? presentColumns : absentColumns}
+            rows={tableRows}
+            emptyMessage={
+              listType === 'present'
+                ? 'No one has checked in yet today.'
+                : 'Everyone has marked attendance today.'
+            }
+          />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={employees}
+          keyExtractor={(item) => item.employee_id.toString()}
+          renderItem={listType === 'present' ? renderPresent : renderAbsent}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              {listType === 'present' ? 'No one has checked in yet today.' : 'Everyone has marked attendance today.'}
+            </Text>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -109,6 +185,7 @@ const styles = StyleSheet.create({
     marginBottom: 10, elevation: 2,
   },
   name: { fontSize: 15, fontWeight: 'bold', color: '#333' },
+  tableCell: { fontSize: 12, color: '#334155' },
   mobile: { fontSize: 13, color: '#888', marginTop: 2 },
   detail: { fontSize: 12, color: '#1a237e', marginTop: 6 },
   row: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' },

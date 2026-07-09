@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert
+  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { getProjectDetailsAPI } from '../../services/api';
 import { getApiErrorMessage } from '../../utils/apiError';
+import DataTable from '../../components/DataTable';
+import { isWeb } from '../../utils/platform';
 
 export default function ProjectDetailsScreen({ navigation, route }) {
   const project = route.params?.project;
@@ -26,6 +28,18 @@ export default function ProjectDetailsScreen({ navigation, route }) {
   useEffect(() => {
     loadDetails();
   }, [loadDetails]);
+
+  const employeeColumns = [
+    { key: 'index', label: '#', flex: 0.5 },
+    { key: 'name', label: 'Employee Name', flex: 1.5 },
+    { key: 'mobile_number', label: 'Mobile Number', flex: 1.2 },
+  ];
+
+  const employeeRows = (details?.employees || []).map((item, index) => ({
+    ...item,
+    key: String(item.id),
+    index: index + 1,
+  }));
 
   const renderEmployee = ({ item }) => (
     <View style={styles.employeeCard}>
@@ -89,15 +103,23 @@ export default function ProjectDetailsScreen({ navigation, route }) {
       </View>
 
       <Text style={styles.sectionTitle}>Assigned Employees</Text>
-      <FlatList
-        data={details?.employees || []}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderEmployee}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No employees assigned to this project</Text>
-        }
-      />
+      {isWeb ? (
+        <DataTable
+          columns={employeeColumns}
+          rows={employeeRows}
+          emptyMessage="No employees assigned to this project"
+        />
+      ) : (
+        <FlatList
+          data={details?.employees || []}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderEmployee}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No employees assigned to this project</Text>
+          }
+        />
+      )}
     </View>
   );
 }

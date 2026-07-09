@@ -11,6 +11,8 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { getDateRange, PRESET_LABELS } from '../../utils/dateRanges';
 import { exportBulkAttendanceExcel, exportBulkAttendancePdf } from '../../utils/reportExport';
 import { getUser } from '../../utils/storage';
+import DataTable from '../../components/DataTable';
+import { isWeb } from '../../utils/platform';
 
 export default function AttendanceReportScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -193,6 +195,39 @@ export default function AttendanceReportScreen({ navigation }) {
     return assigned.map((p) => p.project_number).join(', ');
   };
 
+  const reportTableColumns = [
+    { key: 'index', label: '#', flex: 0.4 },
+    { key: 'name', label: 'Name', flex: 1.4 },
+    { key: 'mobile_number', label: 'Mobile', flex: 1 },
+    {
+      key: 'projects',
+      label: 'Project(s)',
+      flex: 1.2,
+      render: (row) => (
+        <Text style={styles.tableProjectText}>{getProjectLabel(row.id)}</Text>
+      ),
+    },
+    {
+      key: 'report',
+      label: 'Report',
+      flex: 0.8,
+      render: (row) => (
+        <TouchableOpacity
+          style={styles.tableViewBtn}
+          onPress={() => navigation.navigate('AdminEmployeeReport', { employee: row })}
+        >
+          <Text style={styles.tableViewBtnText}>View →</Text>
+        </TouchableOpacity>
+      ),
+    },
+  ];
+
+  const reportTableRows = filteredEmployees.map((item, index) => ({
+    ...item,
+    key: String(item.id),
+    index: index + 1,
+  }));
+
   const renderEmployee = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
@@ -322,16 +357,27 @@ export default function AttendanceReportScreen({ navigation }) {
         <Text style={styles.subtitle}>Search, filter by project & export</Text>
       </View>
 
-      <FlatList
-        data={filteredEmployees}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderEmployee}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No employees match your search</Text>
-        }
-      />
+      {isWeb ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+          {listHeader}
+          <DataTable
+            columns={reportTableColumns}
+            rows={reportTableRows}
+            emptyMessage="No employees match your search"
+          />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filteredEmployees}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderEmployee}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No employees match your search</Text>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -382,5 +428,11 @@ const styles = StyleSheet.create({
   empMobile: { fontSize: 13, color: '#666', marginTop: 2 },
   empProject: { fontSize: 11, color: '#3949ab', marginTop: 4, fontWeight: '600' },
   arrow: { fontSize: 24, color: '#1a237e' },
+  tableProjectText: { fontSize: 12, color: '#3949ab', fontWeight: '600' },
+  tableViewBtn: {
+    backgroundColor: '#e8eaf6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  tableViewBtnText: { color: '#1a237e', fontSize: 12, fontWeight: '700' },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 15 },
 });

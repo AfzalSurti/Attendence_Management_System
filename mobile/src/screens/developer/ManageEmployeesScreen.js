@@ -10,7 +10,9 @@ import {
   createProjectAPI, assignProjectAPI, removeAssignmentAPI, getAdminsAPI
 } from '../../services/api';
 import EmployeeBulkUpload from '../../components/EmployeeBulkUpload';
+import DataTable from '../../components/DataTable';
 import { getUser } from '../../utils/storage';
+import { isWeb } from '../../utils/platform';
 
 const emptyNewProject = () => ({ project_number: '', project_name: '' });
 
@@ -325,6 +327,55 @@ export default function ManageEmployeesScreen({ navigation }) {
     setUnassignedProjects([]);
   };
 
+  const employeeTableColumns = [
+    { key: 'index', label: '#', flex: 0.4 },
+    { key: 'name', label: 'Name', flex: 1.4 },
+    { key: 'mobile_number', label: 'Mobile', flex: 1 },
+    {
+      key: 'actions',
+      label: 'Actions',
+      flex: 2.6,
+      render: (row) => (
+        <View style={styles.tableActions}>
+          <TouchableOpacity
+            style={styles.tableBtnPurple}
+            onPress={() => navigation.navigate('EmployeeAttendance', { employee: row })}
+          >
+            <Text style={styles.tableBtnPurpleText}>Attendance</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tableBtnBlue}
+            onPress={() => openProjectsModal(row)}
+          >
+            <Text style={styles.tableBtnBlueText}>Projects</Text>
+          </TouchableOpacity>
+          {!isReadOnlyAdmin && (
+            <>
+              <TouchableOpacity
+                style={styles.tableBtnEdit}
+                onPress={() => openEditModal(row)}
+              >
+                <Text style={styles.tableBtnEditText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.tableBtnDelete}
+                onPress={() => handleDelete(row)}
+              >
+                <Text style={styles.tableBtnDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      ),
+    },
+  ];
+
+  const employeeTableRows = employees.map((item, index) => ({
+    ...item,
+    key: String(item.id),
+    index: index + 1,
+  }));
+
   const renderEmployee = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardInfo}>
@@ -426,15 +477,25 @@ export default function ManageEmployeesScreen({ navigation }) {
         />
       )}
 
-      <FlatList
-        data={employees}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderEmployee}
-        contentContainerStyle={{ paddingBottom: 30 }}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No employees found</Text>
-        }
-      />
+      {isWeb ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+          <DataTable
+            columns={employeeTableColumns}
+            rows={employeeTableRows}
+            emptyMessage="No employees found"
+          />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={employees}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderEmployee}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No employees found</Text>
+          }
+        />
+      )}
 
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -669,6 +730,23 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: { color: '#c62828', fontWeight: 'bold', fontSize: 12 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 40, fontSize: 15 },
+  tableActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tableBtnPurple: {
+    backgroundColor: '#f3e5f5', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6,
+  },
+  tableBtnPurpleText: { color: '#6a1b9a', fontSize: 11, fontWeight: '700' },
+  tableBtnBlue: {
+    backgroundColor: '#e8eaf6', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6,
+  },
+  tableBtnBlueText: { color: '#1a237e', fontSize: 11, fontWeight: '700' },
+  tableBtnEdit: {
+    backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6,
+  },
+  tableBtnEditText: { color: '#1565c0', fontSize: 11, fontWeight: '700' },
+  tableBtnDelete: {
+    backgroundColor: '#ffebee', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6,
+  },
+  tableBtnDeleteText: { color: '#c62828', fontSize: 11, fontWeight: '700' },
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center', alignItems: 'center', padding: 20
