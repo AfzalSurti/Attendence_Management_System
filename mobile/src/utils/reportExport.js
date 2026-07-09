@@ -152,6 +152,18 @@ const downloadOnWeb = (content, filename, mimeType) => {
   URL.revokeObjectURL(url);
 };
 
+const downloadBinaryOnWeb = (binaryData, filename, mimeType) => {
+  const blob = new Blob([binaryData], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 const fallbackPdfDownloadOnWeb = (title, subtitle, headers, rows, filename) => {
   const html = `
     <html>
@@ -221,6 +233,42 @@ const shareFile = async (uri, mimeType) => {
   await Sharing.shareAsync(uri, { mimeType, UTI: mimeType });
 };
 
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+const createWorkbook = async (title, subtitle, headers, rows) => {
+  const XLSX = await import('xlsx');
+  const data = [
+    [title],
+    [subtitle],
+    [`Generated: ${new Date().toLocaleString('en-IN')}`],
+    [],
+    headers,
+    ...(rows.length ? rows : [new Array(headers.length).fill('No records found')]),
+  ];
+
+  const sheet = XLSX.utils.aoa_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Attendance');
+  return { XLSX, workbook };
+};
+
+const exportXlsx = async (filename, title, subtitle, headers, rows) => {
+  const { XLSX, workbook } = await createWorkbook(title, subtitle, headers, rows);
+
+  if (isWeb) {
+    const xlsxArray = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    downloadBinaryOnWeb(xlsxArray, filename, XLSX_MIME);
+    return;
+  }
+
+  const xlsxBase64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+  const path = `${FileSystem.cacheDirectory}${filename}`;
+  await FileSystem.writeAsStringAsync(path, xlsxBase64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  await shareFile(path, XLSX_MIME);
+};
+
 const buildAttendanceCsv = (employeeName, records, rangeLabel) => {
   const escapeCsv = (value) => {
     const str = value == null ? '' : String(value);
@@ -261,22 +309,13 @@ const buildBulkAttendanceCsv = (title, records, filterLabel) => {
 
 export const exportAttendanceExcel = async (employeeName, records, rangeLabel) => {
   const safeName = employeeName.replace(/[^a-zA-Z0-9]/g, '_');
-  if (isWeb) {
-    const html = buildExcelHtml(
-      `Attendance Report — ${employeeName}`,
-      `Period: ${rangeLabel}`,
-      SINGLE_HEADERS,
-      buildSingleRows(records),
-    );
-    downloadOnWeb(html, `attendance_${safeName}_${Date.now()}.xls`, 'application/vnd.ms-excel;charset=utf-8');
-    return;
-  }
-  const csv = buildAttendanceCsv(employeeName, records, rangeLabel);
-  const path = `${FileSystem.cacheDirectory}attendance_${safeName}_${Date.now()}.csv`;
-  await FileSystem.writeAsStringAsync(path, csv, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-  await shareFile(path, 'text/csv');
+  await exportXlsx(
+    `attendance_${safeName}_${Date.now()}.xlsx`,
+    `Attendance Report — ${employeeName}`,
+    `Period: ${rangeLabel}`,
+    SINGLE_HEADERS,
+    buildSingleRows(records),
+  );
 };
 
 export const exportAttendancePdf = async (employeeName, records, rangeLabel) => {
@@ -297,22 +336,13 @@ export const exportAttendancePdf = async (employeeName, records, rangeLabel) => 
 };
 
 export const exportBulkAttendanceExcel = async (title, records, filterLabel) => {
-  if (isWeb) {
-    const html = buildExcelHtml(
-      title,
-      `Filters: ${filterLabel}`,
-      BULK_HEADERS,
-      buildBulkRows(records),
-    );
-    downloadOnWeb(html, `attendance_bulk_${Date.now()}.xls`, 'application/vnd.ms-excel;charset=utf-8');
-    return;
-  }
-  const csv = buildBulkAttendanceCsv(title, records, filterLabel);
-  const path = `${FileSystem.cacheDirectory}attendance_bulk_${Date.now()}.csv`;
-  await FileSystem.writeAsStringAsync(path, csv, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-  await shareFile(path, 'text/csv');
+  await exportXlsx(
+    `attendance_bulk_${Date.now()}.xlsx`,
+    title,
+    `Filters: ${filterLabel}`,
+    BULK_HEADERS,
+    buildBulkRows(records),
+  );
 };
 
 export const exportBulkAttendancePdf = async (title, records, filterLabel) => {
