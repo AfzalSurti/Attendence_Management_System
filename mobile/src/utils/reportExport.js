@@ -1,8 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatCoords } from './coordinates';
 import { isWeb } from './platform';
 
@@ -154,29 +152,65 @@ const downloadOnWeb = (content, filename, mimeType) => {
   URL.revokeObjectURL(url);
 };
 
-const savePdfOnWeb = (title, subtitle, headers, rows, filename) => {
-  const doc = new jsPDF({ orientation: headers.length > 8 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
+const fallbackPdfDownloadOnWeb = (title, subtitle, headers, rows, filename) => {
+  const html = `
+    <html>
+      <head><meta charset="utf-8" /></head>
+      <body style="font-family:Arial,sans-serif;padding:24px;color:#222;">
+        <h1 style="color:#1a237e;font-size:20px;margin-bottom:4px;">${escapeHtml(title)}</h1>
+        <p style="color:#666;font-size:12px;margin-bottom:20px;">
+          ${escapeHtml(subtitle)} | Generated: ${escapeHtml(new Date().toLocaleString('en-IN'))}
+        </p>
+        ${buildTableHtml(headers, rows)}
+      </body>
+    </html>
+  `;
+  downloadOnWeb(html, filename.replace(/\.pdf$/i, '.html'), 'text/html;charset=utf-8');
+};
 
-  doc.setFontSize(14);
-  doc.setTextColor(26, 35, 126);
-  doc.text(title, 40, 40, { maxWidth: pageWidth - 80 });
+const savePdfOnWeb = async (title, subtitle, headers, rows, filename) => {
+  try {
+    // Dynamic import keeps web build stable in Expo and avoids module init issues.
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
 
-  doc.setFontSize(9);
-  doc.setTextColor(102, 102, 102);
-  doc.text(`${subtitle} | Generated: ${new Date().toLocaleString('en-IN')}`, 40, 58, { maxWidth: pageWidth - 80 });
+    const autoTableFn = autoTableModule.default || autoTableModule.autoTable;
+    if (!jsPDF || !autoTableFn) {
+      throw new Error('PDF library not available');
+    }
 
-  autoTable(doc, {
-    head: [headers],
-    body: rows.length ? rows : [['No records found']],
-    startY: 72,
-    styles: { fontSize: 7, cellPadding: 4, overflow: 'linebreak' },
-    headStyles: { fillColor: [26, 35, 126], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    margin: { left: 40, right: 40 },
-  });
+    const doc = new jsPDF({
+      orientation: headers.length > 8 ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: 'a4',
+    });
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-  doc.save(filename);
+    doc.setFontSize(14);
+    doc.setTextColor(26, 35, 126);
+    doc.text(title, 40, 40, { maxWidth: pageWidth - 80 });
+
+    doc.setFontSize(9);
+    doc.setTextColor(102, 102, 102);
+    doc.text(`${subtitle} | Generated: ${new Date().toLocaleString('en-IN')}`, 40, 58, { maxWidth: pageWidth - 80 });
+
+    autoTableFn(doc, {
+      head: [headers],
+      body: rows.length ? rows : [['No records found']],
+      startY: 72,
+      styles: { fontSize: 7, cellPadding: 4, overflow: 'linebreak' },
+      headStyles: { fillColor: [26, 35, 126], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { left: 40, right: 40 },
+    });
+
+    doc.save(filename);
+  } catch (err) {
+    // Fallback ensures user still gets export instead of silent failure.
+    fallbackPdfDownloadOnWeb(title, subtitle, headers, rows, filename);
+  }
 };
 
 const shareFile = async (uri, mimeType) => {
@@ -248,7 +282,7 @@ export const exportAttendanceExcel = async (employeeName, records, rangeLabel) =
 export const exportAttendancePdf = async (employeeName, records, rangeLabel) => {
   const safeName = employeeName.replace(/[^a-zA-Z0-9]/g, '_');
   if (isWeb) {
-    savePdfOnWeb(
+    await savePdfOnWeb(
       `Attendance Report — ${employeeName}`,
       `Period: ${rangeLabel}`,
       SINGLE_HEADERS,
@@ -283,7 +317,7 @@ export const exportBulkAttendanceExcel = async (title, records, filterLabel) => 
 
 export const exportBulkAttendancePdf = async (title, records, filterLabel) => {
   if (isWeb) {
-    savePdfOnWeb(
+    await savePdfOnWeb(
       title,
       `Filters: ${filterLabel}`,
       BULK_HEADERS,
