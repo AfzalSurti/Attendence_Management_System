@@ -69,7 +69,10 @@ export const removeAssignmentAPI = (employeeId, projectId) =>
   api.delete(`/projects/assign/${employeeId}/${projectId}`);
 
 // Admin
-export const getAdminAttendanceAPI = (params) => api.get('/admin/attendance', { params });
+export const getAdminAttendanceAPI = (params) => api.get('/admin/attendance', {
+  params,
+  timeout: 90000,
+});
 export const get30DayReportAPI = () => api.get('/admin/attendance/30days');
 export const getOverviewAPI = (params) => api.get('/admin/overview', { params });
 export const getTodayAttendanceSummaryAPI = (params) => api.get('/admin/today-attendance', { params });
