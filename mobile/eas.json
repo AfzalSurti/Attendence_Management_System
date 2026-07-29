@@ -25,6 +25,11 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://attendance-management-api.onrender.com",
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "db39wpj0j",
+        "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "attendance_selfies"
       }
     }
   }

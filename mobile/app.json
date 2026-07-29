@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.attendance.system",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
