@@ -205,6 +205,18 @@ const downloadOnWeb = (content, filename, mimeType) => {
   URL.revokeObjectURL(url);
 };
 
+const downloadBinaryOnWeb = (binaryData, filename, mimeType) => {
+  const blob = new Blob([binaryData], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 const getImageTypeFromDataUrl = (dataUrl) => {
   const match = /^data:image\/(png|jpeg|jpg|webp);/i.exec(dataUrl || '');
   if (!match) return 'JPEG';
@@ -411,43 +423,145 @@ const shareFile = async (uri, mimeType) => {
 };
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const EXCEL_IMAGE_PX = 96;
+const EXCEL_ROW_HEIGHT = 78;
 
-const createWorkbook = async (title, subtitle, headers, rows) => {
-  const XLSX = await import('xlsx');
-  const data = [
-    [title],
-    [subtitle],
-    [`Generated: ${new Date().toLocaleString('en-IN')}`],
-    [],
-    headers,
-    ...(rows.length ? rows : [new Array(headers.length).fill('No records found')]),
-  ];
+const dataUrlToBase64Parts = (dataUrl) => {
+  const match = /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i.exec(dataUrl || '');
+  if (!match) return null;
+  let extension = match[1].toLowerCase();
+  if (extension === 'jpg') extension = 'jpeg';
+  if (extension === 'webp') extension = 'jpeg';
+  return { extension, base64: match[2] };
+};
 
-  const sheet = XLSX.utils.aoa_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, 'Attendance');
-  return { XLSX, workbook };
+const createExcelJsWorkbookWithPhotos = async (title, subtitle, headers, rows, selfieColumns = []) => {
+  const ExcelJS = (await import('exceljs')).default || (await import('exceljs'));
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Attendance', {
+    views: [{ state: 'frozen', ySplit: 5 }],
+  });
+
+  sheet.addRow([title]);
+  sheet.addRow([subtitle]);
+  sheet.addRow([`Generated: ${new Date().toLocaleString('en-IN')}`]);
+  sheet.addRow([]);
+  sheet.addRow(headers);
+
+  sheet.getRow(1).font = { bold: true, size: 14, color: { argb: 'FF1A237E' } };
+  sheet.getRow(5).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  sheet.getRow(5).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF1A237E' },
+  };
+
+  headers.forEach((_, colIndex) => {
+    const col = sheet.getColumn(colIndex + 1);
+    if (selfieColumns.includes(colIndex)) {
+      col.width = 16;
+    } else {
+      col.width = Math.min(28, Math.max(12, String(headers[colIndex]).length + 4));
+    }
+  });
+
+  const imageMap = isWeb ? await loadSelfieImageMapOnWeb(rows, selfieColumns) : {};
+
+  const dataRows = rows.length
+    ? rows
+    : [new Array(headers.length).fill('No records found')];
+
+  dataRows.forEach((row, rowIndex) => {
+    const excelRowIndex = rowIndex + 6; // 1-based: title/meta/header take first 5 rows
+    const values = row.map((cell, colIndex) => {
+      if (selfieColumns.includes(colIndex)) {
+        return imageMap[`${rowIndex}:${colIndex}`] ? '' : (isSelfieUrl(cell) ? 'Photo unavailable' : '--');
+      }
+      return cell;
+    });
+
+    const excelRow = sheet.addRow(values);
+    if (selfieColumns.some((colIndex) => imageMap[`${rowIndex}:${colIndex}`])) {
+      excelRow.height = EXCEL_ROW_HEIGHT;
+    }
+
+    selfieColumns.forEach((colIndex) => {
+      const imageMeta = imageMap[`${rowIndex}:${colIndex}`];
+      if (!imageMeta?.dataUrl) return;
+
+      const parts = dataUrlToBase64Parts(imageMeta.dataUrl);
+      if (!parts) return;
+
+      try {
+        const imageId = workbook.addImage({
+          base64: parts.base64,
+          extension: parts.extension,
+        });
+
+        // Embed image inside the workbook (not an external/linked URL).
+        sheet.addImage(imageId, {
+          tl: { col: colIndex + 0.15, row: excelRowIndex - 1 + 0.15 },
+          ext: { width: EXCEL_IMAGE_PX, height: EXCEL_IMAGE_PX },
+          editAs: 'oneCell',
+        });
+      } catch {
+        excelRow.getCell(colIndex + 1).value = 'Photo unavailable';
+      }
+    });
+  });
+
+  return workbook;
 };
 
 const exportExcelWithPhotosOnWeb = async (filename, title, subtitle, headers, rows, selfieColumns = []) => {
-  const imageMapRaw = await loadSelfieImageMapOnWeb(rows, selfieColumns);
-  const imageMap = Object.fromEntries(
-    Object.entries(imageMapRaw).map(([key, value]) => [key, value.dataUrl || value])
+  const workbook = await createExcelJsWorkbookWithPhotos(
+    title,
+    subtitle,
+    headers,
+    rows,
+    selfieColumns,
   );
-
-  // HTML Excel keeps full selfie photos visible when opened in Excel / Sheets.
-  const html = buildExcelHtml(title, subtitle, headers, rows, selfieColumns, imageMap);
-  const safeName = filename.replace(/\.xlsx$/i, '.xls');
-  downloadOnWeb(html, safeName, 'application/vnd.ms-excel;charset=utf-8');
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBinaryOnWeb(buffer, filename.replace(/\.xls$/i, '.xlsx'), XLSX_MIME);
 };
 
-const writeNativeExcelHtml = async (filename, title, subtitle, headers, rows, selfieColumns = []) => {
-  const safeName = filename.replace(/\.xlsx$/i, '.xls');
-  const html = buildExcelHtml(title, subtitle, headers, rows, selfieColumns);
-  const path = `${FileSystem.cacheDirectory}${safeName}`;
-  const utf8Encoding = FileSystem.EncodingType?.UTF8 || 'utf8';
-  await FileSystem.writeAsStringAsync(path, html, { encoding: utf8Encoding });
-  await shareFile(path, 'application/vnd.ms-excel');
+const writeNativeExcelWithPhotos = async (filename, title, subtitle, headers, rows, selfieColumns = []) => {
+  // On native we may not be able to fetch remote selfies due to CORS/network limits.
+  // Still produce a proper XLSX; photo cells keep URL text as fallback.
+  const ExcelJS = (await import('exceljs')).default || (await import('exceljs'));
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Attendance');
+
+  sheet.addRow([title]);
+  sheet.addRow([subtitle]);
+  sheet.addRow([`Generated: ${new Date().toLocaleString('en-IN')}`]);
+  sheet.addRow([]);
+  sheet.addRow(headers);
+
+  const dataRows = rows.length
+    ? rows
+    : [new Array(headers.length).fill('No records found')];
+
+  dataRows.forEach((row) => {
+    sheet.addRow(
+      row.map((cell, colIndex) => {
+        if (selfieColumns.includes(colIndex) && isSelfieUrl(cell)) {
+          return { text: 'Open selfie', hyperlink: cell };
+        }
+        return cell;
+      })
+    );
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const base64 = typeof Buffer !== 'undefined'
+    ? Buffer.from(buffer).toString('base64')
+    : btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  const path = `${FileSystem.cacheDirectory}${filename.replace(/\.xls$/i, '.xlsx')}`;
+  await FileSystem.writeAsStringAsync(path, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  await shareFile(path, XLSX_MIME);
 };
 
 const exportXlsx = async (filename, title, subtitle, headers, rows, selfieColumns = []) => {
@@ -455,19 +569,7 @@ const exportXlsx = async (filename, title, subtitle, headers, rows, selfieColumn
     await exportExcelWithPhotosOnWeb(filename, title, subtitle, headers, rows, selfieColumns);
     return;
   }
-
-  try {
-    // Native: share HTML Excel with image tags so selfies can render.
-    await writeNativeExcelHtml(filename, title, subtitle, headers, rows, selfieColumns);
-  } catch {
-    const { XLSX, workbook } = await createWorkbook(title, subtitle, headers, rows);
-    const xlsxBase64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-    const path = `${FileSystem.cacheDirectory}${filename}`;
-    await FileSystem.writeAsStringAsync(path, xlsxBase64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    await shareFile(path, XLSX_MIME);
-  }
+  await writeNativeExcelWithPhotos(filename, title, subtitle, headers, rows, selfieColumns);
 };
 
 export const exportAttendanceExcel = async (employeeName, records, rangeLabel) => {
